@@ -55,6 +55,15 @@ button { cursor: pointer; }
 .login-form { display: grid; gap: 22px; text-align: left; }
 .back-button { margin-top: 22px; border: 0; color: #315db0; background: transparent; font-size: 13px; }
 .back-button:hover { color: #5036f5; }
+.register-login-link { display: block; width: 100%; margin-top: 18px; text-align: center; }
+.password-field { position: relative; }
+.password-field input { padding-right: 68px; }
+.visibility-button { position: absolute; top: 50%; right: 10px; transform: translateY(-50%); border: 0; color: #5036f5; background: transparent; font-size: 12px; font-weight: 700; }
+.text-link { margin-top: 20px; border: 0; color: #5036f5; background: transparent; font-size: 13px; font-weight: 700; }
+.success-message { padding: 12px 14px; border-left: 3px solid #29936d; color: #176b50; background: #e4f5ed; font-size: 13px; }
+.home-screen { width: 100%; animation: rise-in 500ms ease both; text-align: center; }
+.home-screen .brand-logo { margin-bottom: 32px; }
+.home-screen h1 { margin: 0 0 10px; color: #102b55; font: 600 32px/1.08 'Space Grotesk', sans-serif; }
 
 @keyframes rise-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @media (min-width: 700px) { .registration-card { min-height: auto; border-radius: 16px; } }

@@ -72,6 +72,11 @@ public sealed class RegisterTenantTests
             Saved = application;
             return Task.CompletedTask;
         }
+
+        public Task<TenantApplication?> FindAsync(string countryCode, string mobileNumber, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Saved);
+
+        public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private sealed class FakeTenantIdGenerator : ITenantIdGenerator
