@@ -11,3 +11,10 @@ public sealed record ResetPinRequest(
     string ConfirmNewPin);
 
 public sealed record ResetPinResponse(string Message);
+
+public sealed record DashboardUserSummaryDto(
+    string TenantId,
+    string FullName,
+    IReadOnlyList<string> AssignedRoles,
+    string MobileNumber,
+    string Email);

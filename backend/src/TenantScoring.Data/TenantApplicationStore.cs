@@ -28,6 +28,13 @@ public sealed class TenantApplicationStore(TenantDbContext dbContext) : ITenantA
             application => application.CountryCode == countryCode && application.MobileNumber == mobileNumber,
             cancellationToken);
 
+    public Task<TenantApplication?> FindByTenantIdAsync(
+        string tenantId,
+        CancellationToken cancellationToken = default) =>
+        dbContext.TenantApplications.SingleOrDefaultAsync(
+            application => application.TenantId == tenantId,
+            cancellationToken);
+
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
         dbContext.SaveChangesAsync(cancellationToken);
 }

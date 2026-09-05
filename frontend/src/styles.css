@@ -64,7 +64,53 @@ button { cursor: pointer; }
 .home-screen { width: 100%; animation: rise-in 500ms ease both; text-align: center; }
 .home-screen .brand-logo { margin-bottom: 32px; }
 .home-screen h1 { margin: 0 0 10px; color: #102b55; font: 600 32px/1.08 'Space Grotesk', sans-serif; }
+.dashboard-page { width: min(100%, 1180px); margin: 0 auto; padding: 26px 30px 38px; color: #142743; }
+.dashboard-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+.dashboard-brand { display: flex; align-items: center; gap: 9px; color: #163867; font: 700 16px 'Space Grotesk', sans-serif; }
+.dashboard-brand-mark { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; color: white; background: #5036f5; font-size: 14px; }
+.dashboard-kicker { margin: 18px 0 5px; color: #667795; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.dashboard-header h1 { margin: 0; color: #122b4f; font: 600 clamp(26px, 3vw, 38px)/1.1 'Space Grotesk', sans-serif; }
+.logout-button { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 15px; border: 0; border-radius: 8px; color: #fff; background: #d94e59; font-size: 12px; font-weight: 700; }
+.logout-button:hover { background: #bd3d48; }
+.profile-summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
+.profile-card { min-width: 0; padding: 18px; border: 1px solid #e1e7f0; border-radius: 12px; background: #fff; box-shadow: 0 5px 15px rgba(43, 65, 104, .05); }
+.profile-card span { display: block; margin-bottom: 10px; color: #7b89a0; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.profile-card strong { display: block; overflow: hidden; color: #243a5b; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.profile-card strong.accent { color: #386bc8; }
+.switch-banner { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 30px; padding: 20px 22px; border-radius: 14px; color: #fff; background: linear-gradient(105deg, #6339e8, #804be9); box-shadow: 0 9px 20px rgba(93, 53, 220, .18); }
+.switch-heading { display: flex; align-items: center; gap: 12px; }
+.switch-heading strong, .switch-heading span { display: block; }
+.switch-heading strong { font-size: 15px; }
+.switch-heading span { margin-top: 4px; color: #e3d9ff; font-size: 12px; }
+.switch-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; background: rgba(255,255,255,.18); }
+.view-toggle { display: flex; gap: 4px; padding: 4px; border-radius: 9px; background: rgba(45, 20, 130, .25); }
+.view-toggle button { min-height: 34px; padding: 0 13px; border: 0; border-radius: 6px; color: #eadfff; background: transparent; font-size: 12px; font-weight: 700; }
+.view-toggle button.active { color: #5a31dc; background: #fff; }
+.actions-section { padding: 0; }
+.section-heading { display: flex; align-items: end; justify-content: space-between; margin-bottom: 16px; }
+.section-heading .dashboard-kicker { margin: 0 0 5px; }
+.section-heading h2 { margin: 0; color: #172f52; font: 600 23px 'Space Grotesk', sans-serif; }
+.action-count { color: #7b89a0; font-size: 12px; }
+.actions-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.action-card { min-height: 210px; padding: 20px; border: 1px solid #e1e7f0; border-radius: 12px; background: #fff; box-shadow: 0 5px 15px rgba(43, 65, 104, .05); transition: transform 180ms ease, box-shadow 180ms ease; }
+.action-card:hover { transform: translateY(-3px); box-shadow: 0 12px 24px rgba(43, 65, 104, .11); }
+.action-icon { display: grid; place-items: center; width: 42px; height: 42px; margin-bottom: 19px; border-radius: 50%; }
+.action-icon.green { color: #16845e; background: #daf4e9; }
+.action-icon.purple { color: #7041d8; background: #eee4ff; }
+.action-icon.blue { color: #3170d1; background: #dfedff; }
+.action-icon.gold { color: #b48620; background: #fff1c9; }
+.action-card h3 { margin: 0 0 8px; color: #183455; font: 600 16px 'Space Grotesk', sans-serif; }
+.action-card p { min-height: 38px; margin: 0 0 17px; color: #78869b; font-size: 12px; line-height: 1.55; }
+.action-link { display: inline-flex; align-items: center; gap: 3px; padding: 0; border: 0; background: transparent; font-size: 12px; font-weight: 700; }
+.action-link.green { color: #16845e; }.action-link.purple { color: #7041d8; }.action-link.blue { color: #3170d1; }.action-link.gold { color: #b48620; }
+.dashboard-state { display: grid; justify-items: center; gap: 12px; width: 100%; padding: 60px 20px; color: #5e6e87; text-align: center; }
+.dashboard-state h1 { margin: 8px 0 0; color: #17345b; font: 600 26px 'Space Grotesk', sans-serif; }.dashboard-state p { margin: 0; font-size: 14px; }
+.dashboard-primary-button { min-height: 44px; padding: 0 18px; border: 0; border-radius: 8px; color: white; background: #5036f5; font-weight: 700; }
+.spin { animation: spin 1s linear infinite; }.dashboard-state + * { width: 100%; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 @keyframes rise-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @media (min-width: 700px) { .registration-card { min-height: auto; border-radius: 16px; } }
+@media (max-width: 900px) { .profile-summary-grid, .actions-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 620px) { .dashboard-page { padding: 22px 16px 30px; }.dashboard-header { align-items: flex-start; }.dashboard-header h1 { font-size: 25px; }.logout-button { padding: 0 10px; }.profile-summary-grid, .actions-grid { grid-template-columns: 1fr 1fr; gap: 10px; }.profile-card { padding: 14px; }.profile-card strong { font-size: 13px; }.switch-banner { align-items: stretch; flex-direction: column; gap: 16px; padding: 17px; }.view-toggle { width: 100%; }.view-toggle button { flex: 1; }.action-card { min-height: 200px; padding: 16px; } }
 @media (max-width: 520px) { .registration-card { padding: 32px 30px 28px; } .form-grid { grid-template-columns: 1fr; } .field-full { grid-column: auto; } }

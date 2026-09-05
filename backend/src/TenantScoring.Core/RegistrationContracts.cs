@@ -12,7 +12,20 @@ public interface ITenantApplicationStore
     Task<bool> ExistsAsync(string countryCode, string mobileNumber, CancellationToken cancellationToken = default);
     Task AddAsync(TenantApplication application, CancellationToken cancellationToken = default);
     Task<TenantApplication?> FindAsync(string countryCode, string mobileNumber, CancellationToken cancellationToken = default);
+    Task<TenantApplication?> FindByTenantIdAsync(string tenantId, CancellationToken cancellationToken = default);
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
+}
+
+public interface IAuthenticationTokenStore
+{
+    string CreateToken(string tenantId);
+    bool TryGetTenantId(string token, out string tenantId);
+    void Remove(string token);
+}
+
+public interface IDashboardService
+{
+    Task<DashboardUserSummaryDto?> GetSummaryAsync(string tenantId, CancellationToken cancellationToken = default);
 }
 
 public sealed record RegistrationResult(bool IsDuplicate, RegisterTenantResponse? Response)

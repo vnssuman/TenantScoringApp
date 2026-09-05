@@ -1,10 +1,11 @@
-using System.Security.Cryptography;
 using BCrypt.Net;
 using TenantScoring.Models;
 
 namespace TenantScoring.Core;
 
-public sealed class AuthenticationService(ITenantApplicationStore store) : IAuthenticationService
+public sealed class AuthenticationService(
+    ITenantApplicationStore store,
+    IAuthenticationTokenStore tokenStore) : IAuthenticationService
 {
     public async Task<LoginResult> LoginAsync(
         LoginRequest request,
@@ -24,7 +25,7 @@ public sealed class AuthenticationService(ITenantApplicationStore store) : IAuth
             ? LoginResult.Success(new LoginResponse(
                 application.TenantId,
                 application.FirstName,
-                CreateToken()))
+                tokenStore.CreateToken(application.TenantId)))
             : LoginResult.Unauthorized;
     }
 
@@ -57,10 +58,4 @@ public sealed class AuthenticationService(ITenantApplicationStore store) : IAuth
         return ResetPinResult.Success;
     }
 
-    private static string CreateToken()
-    {
-        Span<byte> tokenBytes = stackalloc byte[32];
-        RandomNumberGenerator.Fill(tokenBytes);
-        return Convert.ToBase64String(tokenBytes);
-    }
 }

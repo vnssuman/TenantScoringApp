@@ -76,6 +76,9 @@ public sealed class RegisterTenantTests
         public Task<TenantApplication?> FindAsync(string countryCode, string mobileNumber, CancellationToken cancellationToken = default) =>
             Task.FromResult(Saved);
 
+        public Task<TenantApplication?> FindByTenantIdAsync(string tenantId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Saved);
+
         public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 

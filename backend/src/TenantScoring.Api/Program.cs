@@ -18,6 +18,8 @@ builder.Services.AddScoped<ITenantApplicationStore, TenantApplicationStore>();
 builder.Services.AddScoped<ITenantIdGenerator, TenantIdGenerator>();
 builder.Services.AddScoped<ITenantRegistrationService, TenantRegistrationService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddSingleton<IAuthenticationTokenStore, AuthenticationTokenStore>();
 
 var app = builder.Build();
 
@@ -98,6 +100,28 @@ app.MapPost("/api/auth/reset-pin", async (
     }
 
     return Results.Ok(result.Response);
+});
+
+app.MapGet("/api/user/dashboard-summary", async (
+    HttpRequest httpRequest,
+    IAuthenticationTokenStore tokenStore,
+    IDashboardService dashboardService,
+    CancellationToken cancellationToken) =>
+{
+    var authorization = httpRequest.Headers.Authorization.ToString();
+    if (!authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.Unauthorized();
+    }
+
+    var token = authorization["Bearer ".Length..].Trim();
+    if (token.Length == 0 || !tokenStore.TryGetTenantId(token, out var tenantId))
+    {
+        return Results.Unauthorized();
+    }
+
+    var summary = await dashboardService.GetSummaryAsync(tenantId, cancellationToken);
+    return summary is null ? Results.Unauthorized() : Results.Ok(summary);
 });
 
 app.Run();
