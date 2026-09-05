@@ -17,6 +17,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddScoped<ITenantApplicationStore, TenantApplicationStore>();
 builder.Services.AddScoped<ITenantIdGenerator, TenantIdGenerator>();
 builder.Services.AddScoped<ITenantRegistrationService, TenantRegistrationService>();
+builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
 var app = builder.Build();
 
@@ -47,6 +48,56 @@ app.MapPost("/api/tenants/register", async (
     }
 
     return Results.Created($"/api/tenants/{result.Response!.TenantId}", result.Response);
+});
+
+app.MapPost("/api/auth/login", async (
+    LoginRequest request,
+    IAuthenticationService authenticationService,
+    CancellationToken cancellationToken) =>
+{
+    var validationErrors = AuthenticationValidator.ValidateLogin(request);
+    if (validationErrors.Count > 0)
+    {
+        return Results.BadRequest(new { errors = validationErrors });
+    }
+
+    var result = await authenticationService.LoginAsync(request, cancellationToken);
+    if (result.MobileNumberNotFound)
+    {
+        return Results.NotFound(new { message = "Mobile Number does not exist. Please register." });
+    }
+
+    if (result.InvalidPin)
+    {
+        return Results.BadRequest(new { message = "Invalid PIN. Please try again." });
+    }
+
+    return Results.Ok(result.Response);
+});
+
+app.MapPost("/api/auth/reset-pin", async (
+    ResetPinRequest request,
+    IAuthenticationService authenticationService,
+    CancellationToken cancellationToken) =>
+{
+    var validationErrors = AuthenticationValidator.ValidateReset(request);
+    if (validationErrors.Count > 0)
+    {
+        return Results.BadRequest(new { errors = validationErrors });
+    }
+
+    var result = await authenticationService.ResetPinAsync(request, cancellationToken);
+    if (result.ValidationError is not null)
+    {
+        return Results.BadRequest(new { message = result.ValidationError });
+    }
+
+    if (result.MobileNumberNotFound)
+    {
+        return Results.NotFound(new { message = "Mobile Number does not exist. Please register." });
+    }
+
+    return Results.Ok(result.Response);
 });
 
 app.Run();

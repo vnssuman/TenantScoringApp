@@ -134,6 +134,11 @@ export function RegisterTenantForm(): ReactElement {
         {isSubmitting ? 'Submitting...' : 'Submit'}
       </button>
       <p className="privacy-note">Your PIN is encrypted before it is stored.</p>
+      <button className="back-button register-login-link" type="button" onClick={() => {
+        window.location.hash = 'login';
+      }}>
+        Back to login
+      </button>
     </form>
   );
 }

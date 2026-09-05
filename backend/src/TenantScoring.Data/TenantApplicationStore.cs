@@ -19,4 +19,15 @@ public sealed class TenantApplicationStore(TenantDbContext dbContext) : ITenantA
         await dbContext.TenantApplications.AddAsync(application, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    public Task<TenantApplication?> FindAsync(
+        string countryCode,
+        string mobileNumber,
+        CancellationToken cancellationToken = default) =>
+        dbContext.TenantApplications.SingleOrDefaultAsync(
+            application => application.CountryCode == countryCode && application.MobileNumber == mobileNumber,
+            cancellationToken);
+
+    public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
+        dbContext.SaveChangesAsync(cancellationToken);
 }

@@ -32,4 +32,6 @@ public sealed class TenantApplication
     public string Email { get; private set; } = null!;
     public string PinHash { get; private set; } = null!;
     public DateTimeOffset CreatedAt { get; private set; }
+
+    public void ChangePin(string pinHash) => PinHash = pinHash;
 }
