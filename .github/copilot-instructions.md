@@ -20,3 +20,5 @@
 ## Security & Enterprise Rules
 1. **No Hardcoded Secrets:** Connection strings, JWT secrets, and keys must read from `.env` or `appsettings.Development.json`.
 2. **PII Masking:** Mask SSNs, bank details, and sensitive credit metrics in UI state and backend logs.
+
+Always execute file creation and file edit tools directly into the workspace. Never output raw JSON tool calls or file edit payloads in chat text. Automatically apply changes to the target files.

@@ -1,0 +1,25 @@
+# .NET build output
+**/bin/
+**/obj/
+
+# Frontend dependencies and build output
+frontend/node_modules/
+frontend/dist/
+
+# Root-level package artifacts are not part of this monorepo's frontend project
+/package-lock.json
+/package.json
+
+# IDE and operating system files
+.vs/
+.vscode/
+*.user
+*.suo
+.DS_Store
+Thumbs.db
+
+# Local environment and logs
+.env
+.env.*
+!.env.example
+*.log
