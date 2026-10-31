@@ -17,4 +17,5 @@ public sealed record DashboardUserSummaryDto(
     string FullName,
     IReadOnlyList<string> AssignedRoles,
     string MobileNumber,
-    string Email);
+    string Email,
+    decimal? OverallScore = null);

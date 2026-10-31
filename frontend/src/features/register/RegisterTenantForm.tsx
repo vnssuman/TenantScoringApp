@@ -44,7 +44,11 @@ function validateForm(form: RegisterTenantRequest): RegisterTenantFieldErrors {
   return errors;
 }
 
-export function RegisterTenantForm(): ReactElement {
+interface RegisterTenantFormProps {
+  notice?: string;
+}
+
+export function RegisterTenantForm({ notice }: RegisterTenantFormProps): ReactElement {
   const [form, setForm] = useState<RegisterTenantRequest>(initialForm);
   const [errors, setErrors] = useState<RegisterTenantFieldErrors>(initialErrors);
   const [serverError, setServerError] = useState('');
@@ -129,6 +133,7 @@ export function RegisterTenantForm(): ReactElement {
         </div>
       </div>
 
+      {notice && <div className="server-error" role="status">{notice}</div>}
       {serverError && <div className="server-error" role="alert">{serverError}</div>}
       <button className="primary-button" type="submit" disabled={isSubmitting}>
         {isSubmitting ? 'Submitting...' : 'Submit'}

@@ -11,9 +11,12 @@ interface ApiErrorPayload {
 }
 
 export class AuthApiError extends Error {
-  constructor(message: string) {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
     super(message);
     this.name = 'AuthApiError';
+    this.status = status;
   }
 }
 
@@ -26,14 +29,14 @@ async function post<TResponse>(path: string, data: LoginRequest | ResetPinReques
 
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as ApiErrorPayload | null;
-    throw new AuthApiError(payload?.message ?? payload?.errors?.[0] ?? 'The request could not be completed.');
+    throw new AuthApiError(payload?.message ?? payload?.errors?.[0] ?? 'The request could not be completed.', response.status);
   }
 
   return (await response.json()) as TResponse;
 }
 
 export function loginUser(data: LoginRequest): Promise<LoginResponse> {
-  return post<LoginResponse>('/api/auth/login', data);
+  return post<LoginResponse>('/api/kirayee/auth/login', data);
 }
 
 export function resetPin(data: ResetPinRequest): Promise<ResetPinResponse> {

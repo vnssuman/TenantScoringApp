@@ -9,5 +9,9 @@
     <ProjectReference Include="..\TenantScoring.Core\TenantScoring.Core.csproj" />
     <ProjectReference Include="..\TenantScoring.Data\TenantScoring.Data.csproj" />
     <ProjectReference Include="..\TenantScoring.Models\TenantScoring.Models.csproj" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 </Project>

@@ -5,9 +5,23 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  tenantId: string;
-  firstName: string;
+  userId: string;
+  firstName?: string;
+  currentRole: string;
   token: string;
+  profileStatus: ProfileStatus;
+}
+
+export interface ProfileStatus {
+  isProfileComplete: boolean;
+  completionPercentage: number;
+  isMobileVerified: boolean;
+  isEmailVerified: boolean;
+  isPanVerified: boolean;
+  isAadhaarVerified: boolean;
+  behavioralAssessmentCompleted: boolean;
+  behavioralScore: number;
+  missingFields: string[];
 }
 
 export interface ResetPinRequest {

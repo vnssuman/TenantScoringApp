@@ -17,10 +17,17 @@ export class TenantRegistrationError extends Error {
 export async function registerTenant(
   request: RegisterTenantRequest,
 ): Promise<RegisterTenantResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/tenants/register`, {
+  const response = await fetch(`${API_BASE_URL}/api/kirayee/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(request),
+    body: JSON.stringify({
+      mobileNumber: request.mobileNumber,
+      email: request.email,
+      pin: request.pin,
+      confirmPin: request.confirmPin,
+      firstName: request.firstName,
+      lastName: request.lastName,
+    }),
   });
 
   if (!response.ok) {
@@ -29,5 +36,6 @@ export async function registerTenant(
     throw new TenantRegistrationError(message);
   }
 
-  return (await response.json()) as RegisterTenantResponse;
+  const result = (await response.json()) as { userId: string; message: string };
+  return { tenantId: result.userId, message: result.message };
 }

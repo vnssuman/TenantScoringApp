@@ -6,6 +6,7 @@ export interface DashboardUserSummary {
   assignedRoles: string[];
   mobileNumber: string;
   email: string;
+  overallScore?: number;
 }
 
 export interface DashboardAction {

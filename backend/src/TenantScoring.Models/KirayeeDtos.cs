@@ -1,0 +1,24 @@
+namespace TenantScoring.Models;
+
+public sealed record KirayeeRegisterRequest(string MobileNumber, string Email, string Pin, string ConfirmPin, string? FirstName, string? LastName);
+public sealed record KirayeeRegisterResponse(Guid UserId, string Message);
+public sealed record VerificationRequest(string Channel, string Code);
+public sealed record ProfileUpdateRequest(string? FirstName, string? LastName, string? PanNumber, string? AadhaarNumber, string? MobileNumber, string? Email, string? Role);
+public sealed record ProfileStatusDto(bool IsProfileComplete, int CompletionPercentage, bool IsMobileVerified, bool IsEmailVerified, bool IsPanVerified, bool IsAadhaarVerified, bool BehavioralAssessmentCompleted, decimal BehavioralScore, IReadOnlyList<string> MissingFields);
+public sealed record BehavioralQuestionDto(Guid QuestionId, string Category, string QuestionText);
+public sealed record BehavioralAnswerRequest(Guid QuestionId, string Answer);
+public sealed record BehavioralAssessmentRequest(IReadOnlyList<BehavioralAnswerRequest> Answers);
+public sealed record BehavioralAssessmentResponse(bool Completed, decimal Score, IReadOnlyList<BehavioralQuestionDto> Questions);
+public sealed record AuthResponseDto(Guid UserId, string? FirstName, string CurrentRole, string Token, ProfileStatusDto ProfileStatus);
+public sealed record ProfileResponse(Guid UserId, string? FirstName, string? LastName, string? MobileNumber, string? Email, string? PanNumber, string? AadhaarNumber, bool MobileVerified, bool EmailVerified, bool PanVerified, bool AadhaarVerified, bool BehavioralAssessmentCompleted, decimal BehavioralScore, int ProfileCompletionScore, int RewardPoints, string CurrentRole, ProfileStatusDto ProfileStatus);
+public sealed record RoleUpdateRequest(string Role);
+public sealed record ScoreResponse(Guid ScoreId, decimal FinalScore, int ProfileScore, decimal CreditScore, decimal PaymentHistory, decimal OwnerFeedback, DateTime CalculatedAt, DateTime ExpiresAt, bool IsExpired);
+public sealed record ScoreRequest(decimal CreditScore, decimal PaymentHistory, decimal OwnerFeedback);
+public sealed record BankAccountRequest(string AccountHolderName, string BankName, string AccountNumber, string IFSCCode);
+public sealed record BankAccountResponse(Guid BankAccountId, string AccountHolderName, string BankName, string AccountNumber, string IFSCCode);
+public sealed record PropertyRequest(Guid? BankAccountId, string PropertyName, string Location, decimal RentAmount, decimal AdvanceAmount);
+public sealed record PropertyResponse(Guid PropertyId, string PropertyName, string Location, decimal RentAmount, decimal AdvanceAmount, string Status, Guid? BankAccountId);
+public sealed record LeaseRequest(Guid PropertyId, decimal? AgreedRent, decimal? AgreedAdvance);
+public sealed record LeaseResponse(Guid LeaseId, Guid PropertyId, Guid TenantId, Guid OwnerId, decimal AgreedRent, decimal AgreedAdvance, string Status, DateTime? StartDate);
+public sealed record PaymentRequest(decimal Amount, string TransactionReference);
+public sealed record PaymentResponse(Guid PaymentId, decimal Amount, DateTime DueDate, DateTime? PaidDate, string Status, int RewardPointsEarned);

@@ -1,10 +1,11 @@
 import { useState, type FormEvent, type ReactElement } from 'react';
 import { AuthApiError, loginUser, resetPin } from '../../services/authApi';
 import type { AuthFieldErrors, LoginRequest, ResetPinRequest } from '../../types/auth';
+import type { LoginResponse } from '../../types/auth';
 
 interface LoginUserPageProps {
   onRegister: () => void;
-  onLoggedIn: (firstName: string, tenantId: string) => void;
+  onLoggedIn: (response: LoginResponse) => void;
 }
 
 const initialLogin: LoginRequest = { countryCode: '+91', mobileNumber: '', pin: '' };
@@ -34,9 +35,14 @@ export function LoginUserPage({ onRegister, onLoggedIn }: LoginUserPageProps): R
     try {
       const response = await loginUser(login);
       localStorage.setItem('kirayeeToken', response.token);
-      onLoggedIn(response.firstName, response.tenantId);
+      onLoggedIn(response);
     } catch (error) {
-      setServerError(error instanceof AuthApiError ? error.message : 'Login could not be completed.');
+      if (error instanceof AuthApiError && (error.status === 401 || error.status === 404)) {
+        sessionStorage.setItem('kirayeeRegistrationNotice', 'Login not available. Please register your account first.');
+        onRegister();
+      } else {
+        setServerError(error instanceof AuthApiError ? error.message : 'Login could not be completed.');
+      }
     } finally {
       setIsSubmitting(false);
     }
