@@ -327,4 +327,11 @@ public sealed class TenantBehavioralResponse
     public DateTime AnsweredAt { get; private set; }
     public User User { get; private set; } = null!;
     public BehavioralQuestion Question { get; private set; } = null!;
+
+    public void UpdateAnswer(string userAnswer, int pointsEarned)
+    {
+        UserAnswer = userAnswer;
+        PointsEarned = pointsEarned;
+        AnsweredAt = DateTime.UtcNow;
+    }
 }

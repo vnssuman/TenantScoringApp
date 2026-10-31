@@ -19,6 +19,8 @@ export interface ProfileStatus {
   isEmailVerified: boolean;
   isPanVerified: boolean;
   isAadhaarVerified: boolean;
+  isPanProvided: boolean;
+  isAadhaarProvided: boolean;
   behavioralAssessmentCompleted: boolean;
   behavioralScore: number;
   missingFields: string[];

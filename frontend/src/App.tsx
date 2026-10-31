@@ -9,7 +9,7 @@ import type { UserProfile } from './types/profile';
 import './styles.css';
 
 export default function App(): ReactElement {
-	const [route, setRoute] = useState(() => window.location.hash.replace('#', '') || 'register');
+	const [route, setRoute] = useState(() => window.location.hash.replace('#', '') || 'login');
 	const [registrationNotice, setRegistrationNotice] = useState(() => sessionStorage.getItem('kirayeeRegistrationNotice') ?? '');
 	const [profileStatus, setProfileStatus] = useState<ProfileStatus | null>(() => {
 		const saved = sessionStorage.getItem('kirayeeProfileStatus');
@@ -17,7 +17,7 @@ export default function App(): ReactElement {
 	});
 
 	useEffect(() => {
-		const handleHashChange = (): void => setRoute(window.location.hash.replace('#', '') || 'register');
+		const handleHashChange = (): void => setRoute(window.location.hash.replace('#', '') || 'login');
 		window.addEventListener('hashchange', handleHashChange);
 		return () => window.removeEventListener('hashchange', handleHashChange);
 	}, []);
@@ -39,7 +39,9 @@ export default function App(): ReactElement {
 		sessionStorage.setItem('kirayeeTenantId', response.userId);
 		setProfileStatus(response.profileStatus);
 		sessionStorage.setItem('kirayeeProfileStatus', JSON.stringify(response.profileStatus));
-		window.location.hash = response.profileStatus.isProfileComplete ? 'home' : 'update-profile';
+		window.location.hash = response.profileStatus.isPanProvided && response.profileStatus.isAadhaarProvided
+			? 'home'
+			: 'update-profile';
 	}
 
 	function handleProfileUpdated(profile: UserProfile): void {
@@ -59,20 +61,22 @@ export default function App(): ReactElement {
 	}
 
 	const content = route === 'login'
-		? <LoginUserPage onRegister={() => { setRegistrationNotice(sessionStorage.getItem('kirayeeRegistrationNotice') ?? ''); window.location.hash = ''; }} onLoggedIn={handleLoggedIn} />
+		? <LoginUserPage onRegister={() => { setRegistrationNotice(sessionStorage.getItem('kirayeeRegistrationNotice') ?? ''); window.location.hash = 'register'; }} onLoggedIn={handleLoggedIn} />
 		: route === 'update-profile' && localStorage.getItem('kirayeeToken')
 			? <ProfileCompletionPage onComplete={handleProfileUpdated} onBack={() => { window.location.hash = 'home'; }} />
 		: route === 'home' && localStorage.getItem('kirayeeToken')
 			? <ScoreDashboardPage onLogout={handleLogout} />
-			: <>
+		: route === 'register'
+			? <>
 				<div className="brand-logo" aria-label="Kirayee">Kirayee</div>
 				<div className="progress-track" aria-label="Registration progress"><span /></div>
 				<RegisterTenantForm notice={registrationNotice} />
-			</>;
+			</>
+		: <LoginUserPage onRegister={() => { setRegistrationNotice(sessionStorage.getItem('kirayeeRegistrationNotice') ?? ''); window.location.hash = 'register'; }} onLoggedIn={handleLoggedIn} />;
 
 	return (
 		<main className="app-shell">
-			<section className={route === 'home' ? 'dashboard-card' : 'registration-card'} aria-label={route === 'home' ? 'Kirayee dashboard' : route === 'update-profile' ? 'Complete profile' : 'Kirayee registration'}>
+			<section className={route === 'home' ? 'dashboard-card' : 'registration-card'} aria-label={route === 'home' ? 'Kirayee dashboard' : route === 'update-profile' ? 'Complete profile' : route === 'login' ? 'Kirayee login' : 'Kirayee registration'}>
 				{content}
 			</section>
 		</main>

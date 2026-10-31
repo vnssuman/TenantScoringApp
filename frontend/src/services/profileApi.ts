@@ -7,7 +7,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     ...options,
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token ?? ''}`, ...options.headers },
   });
-  if (!response.ok) throw new Error('Your profile could not be loaded or updated.');
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(payload?.message ?? 'Your profile could not be loaded or updated.');
+  }
   return (await response.json()) as T;
 }
 

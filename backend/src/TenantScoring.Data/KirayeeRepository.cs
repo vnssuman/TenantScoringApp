@@ -19,7 +19,27 @@ public sealed class KirayeeRepository(TenantDbContext dbContext) : IKirayeeRepos
     public Task<UserProfile?> FindProfileAsync(Guid userId, CancellationToken cancellationToken) => dbContext.UserProfiles.AsTracking().SingleOrDefaultAsync(profile => profile.UserId == userId, cancellationToken);
     public Task<List<BehavioralQuestion>> GetBehavioralQuestionsAsync(CancellationToken cancellationToken) => dbContext.BehavioralQuestions.AsNoTracking().Where(question => question.IsActive).OrderBy(question => question.Category).ToListAsync(cancellationToken);
     public Task<List<TenantBehavioralResponse>> GetBehavioralResponsesAsync(Guid userId, CancellationToken cancellationToken) => dbContext.TenantBehavioralResponses.Where(response => response.UserId == userId).ToListAsync(cancellationToken);
-    public async Task AddBehavioralResponsesAsync(IEnumerable<TenantBehavioralResponse> responses, CancellationToken cancellationToken) { await dbContext.TenantBehavioralResponses.AddRangeAsync(responses, cancellationToken); await dbContext.SaveChangesAsync(cancellationToken); }
+    public async Task ReplaceBehavioralResponsesAsync(Guid userId, IEnumerable<TenantBehavioralResponse> responses, CancellationToken cancellationToken)
+    {
+        var existingResponses = await dbContext.TenantBehavioralResponses
+            .Where(response => response.UserId == userId)
+            .ToListAsync(cancellationToken);
+        var replacements = responses.ToDictionary(response => response.QuestionId);
+
+        foreach (var existing in existingResponses)
+        {
+            if (replacements.Remove(existing.QuestionId, out var replacement))
+            {
+                existing.UpdateAnswer(replacement.UserAnswer, replacement.PointsEarned);
+            }
+            else
+            {
+                dbContext.TenantBehavioralResponses.Remove(existing);
+            }
+        }
+
+        await dbContext.TenantBehavioralResponses.AddRangeAsync(replacements.Values, cancellationToken);
+    }
     public async Task AddBankAccountAsync(OwnerBankAccount account, CancellationToken cancellationToken) { await dbContext.OwnerBankAccounts.AddAsync(account, cancellationToken); await dbContext.SaveChangesAsync(cancellationToken); }
     public async Task<IReadOnlyList<OwnerBankAccount>> GetBankAccountsAsync(Guid ownerId, CancellationToken cancellationToken) => await dbContext.OwnerBankAccounts.AsNoTracking().Where(account => account.OwnerId == ownerId && account.IsActive).ToListAsync(cancellationToken);
     public async Task AddPropertyAsync(Property property, CancellationToken cancellationToken) { await dbContext.Properties.AddAsync(property, cancellationToken); await dbContext.SaveChangesAsync(cancellationToken); }

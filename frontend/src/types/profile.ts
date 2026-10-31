@@ -47,6 +47,7 @@ export interface BehavioralAssessment {
   completed: boolean;
   score: number;
   questions: BehavioralQuestion[];
+  answers?: BehavioralAnswer[];
 }
 
 export interface BehavioralAnswer {

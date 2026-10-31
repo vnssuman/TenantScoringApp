@@ -107,7 +107,7 @@ app.MapPost("/api/kirayee/behavioral-assessment", async (HttpRequest request, Be
     var userId = GetUserId(request);
     if (userId is null) return Results.Unauthorized();
     var assessment = await service.SubmitBehavioralAssessmentAsync(userId.Value, body, cancellationToken);
-    return assessment is null ? Results.BadRequest(new { message = "Answer all three assessment questions once using Yes or No." }) : Results.Ok(assessment);
+    return assessment is null ? Results.BadRequest(new { message = "Submit one Yes or No answer for every active assessment question." }) : Results.Ok(assessment);
 });
 
 app.MapPut("/api/kirayee/role", async (HttpRequest request, RoleUpdateRequest body, IKirayeeService service, CancellationToken cancellationToken) =>

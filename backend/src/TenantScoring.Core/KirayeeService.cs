@@ -13,7 +13,7 @@ public interface IKirayeeRepository
     Task<UserProfile?> FindProfileAsync(Guid userId, CancellationToken cancellationToken);
     Task<List<BehavioralQuestion>> GetBehavioralQuestionsAsync(CancellationToken cancellationToken);
     Task<List<TenantBehavioralResponse>> GetBehavioralResponsesAsync(Guid userId, CancellationToken cancellationToken);
-    Task AddBehavioralResponsesAsync(IEnumerable<TenantBehavioralResponse> responses, CancellationToken cancellationToken);
+    Task ReplaceBehavioralResponsesAsync(Guid userId, IEnumerable<TenantBehavioralResponse> responses, CancellationToken cancellationToken);
     Task AddBankAccountAsync(OwnerBankAccount account, CancellationToken cancellationToken);
     Task<IReadOnlyList<OwnerBankAccount>> GetBankAccountsAsync(Guid ownerId, CancellationToken cancellationToken);
     Task AddPropertyAsync(Property property, CancellationToken cancellationToken);
@@ -78,7 +78,12 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
         var profile = await repository.FindProfileAsync(userId, cancellationToken);
         if (await repository.FindUserAsync(userId, cancellationToken) is null || profile is null) return null;
         var questions = await repository.GetBehavioralQuestionsAsync(cancellationToken);
-        return new BehavioralAssessmentResponse(profile.BehavioralAssessmentCompleted, profile.BehavioralScore, questions.Select(ToQuestion).ToArray());
+        var responses = await repository.GetBehavioralResponsesAsync(userId, cancellationToken);
+        return new BehavioralAssessmentResponse(
+            profile.BehavioralAssessmentCompleted,
+            profile.BehavioralScore,
+            questions.Select(ToQuestion).ToArray(),
+            responses.Select(response => new BehavioralAnswerRequest(response.QuestionId, response.UserAnswer)).ToArray());
     }
 
     public async Task<BehavioralAssessmentResponse?> SubmitBehavioralAssessmentAsync(Guid userId, BehavioralAssessmentRequest request, CancellationToken cancellationToken = default)
@@ -86,8 +91,15 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
         var profile = await repository.FindProfileAsync(userId, cancellationToken);
         if (profile is null) return null;
         var questions = await repository.GetBehavioralQuestionsAsync(cancellationToken);
-        if (questions.Count != 3 || request.Answers.Count != 3 || request.Answers.Select(answer => answer.QuestionId).Distinct().Count() != 3 || request.Answers.Any(answer => answer.Answer is not ("Yes" or "No")) || request.Answers.Any(answer => questions.All(question => question.QuestionId != answer.QuestionId))) return null;
-        if ((await repository.GetBehavioralResponsesAsync(userId, cancellationToken)).Count > 0) return null;
+        if (questions.Count == 0
+            || request.Answers is null
+            || request.Answers.Count != questions.Count
+            || request.Answers.Any(answer => answer is null)
+            || request.Answers.Select(answer => answer.QuestionId).Distinct().Count() != questions.Count
+            || request.Answers.Any(answer => answer.Answer is not ("Yes" or "No"))
+            || request.Answers.Any(answer => questions.All(question => question.QuestionId != answer.QuestionId))) return null;
+        var totalWeight = questions.Sum(question => question.WeightPoints);
+        if (totalWeight <= 0) return null;
 
         var responses = request.Answers.Select(answer =>
         {
@@ -95,11 +107,11 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
             var points = string.Equals(answer.Answer, question.PreferredAnswer, StringComparison.OrdinalIgnoreCase) ? question.WeightPoints : 0;
             return new TenantBehavioralResponse(userId, question.QuestionId, answer.Answer, points);
         }).ToArray();
-        await repository.AddBehavioralResponsesAsync(responses, cancellationToken);
-        var score = responses.Sum(response => response.PointsEarned) / (decimal)questions.Sum(question => question.WeightPoints) * 100m;
+        await repository.ReplaceBehavioralResponsesAsync(userId, responses, cancellationToken);
+        var score = responses.Sum(response => response.PointsEarned) / (decimal)totalWeight * 100m;
         profile.SetBehavioralAssessment(score);
         await repository.SaveChangesAsync(cancellationToken);
-        return new BehavioralAssessmentResponse(true, score, questions.Select(ToQuestion).ToArray());
+        return new BehavioralAssessmentResponse(true, score, questions.Select(ToQuestion).ToArray(), request.Answers);
     }
 
     public async Task<bool> VerifyAsync(Guid userId, VerificationRequest request, CancellationToken cancellationToken = default)
@@ -232,7 +244,7 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
         if (!profile.AadhaarVerified) missingFields.Add("Aadhaar");
         if (!profile.BehavioralAssessmentCompleted) missingFields.Add("Behavioral assessment");
         var completedCount = 7 - missingFields.Count;
-        return new ProfileStatusDto(completedCount == 7, completedCount * 100 / 7, user.MobileVerified, user.EmailVerified, profile.PanVerified, profile.AadhaarVerified, profile.BehavioralAssessmentCompleted, profile.BehavioralScore, missingFields);
+        return new ProfileStatusDto(completedCount == 7, completedCount * 100 / 7, user.MobileVerified, user.EmailVerified, profile.PanVerified, profile.AadhaarVerified, !string.IsNullOrWhiteSpace(profile.PanNumber), !string.IsNullOrWhiteSpace(profile.AadhaarNumber), profile.BehavioralAssessmentCompleted, profile.BehavioralScore, missingFields);
     }
 
     private static BehavioralQuestionDto ToQuestion(BehavioralQuestion question) => new(question.QuestionId, question.Category, question.QuestionText);

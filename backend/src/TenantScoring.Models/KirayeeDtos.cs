@@ -4,11 +4,11 @@ public sealed record KirayeeRegisterRequest(string MobileNumber, string Email, s
 public sealed record KirayeeRegisterResponse(Guid UserId, string Message);
 public sealed record VerificationRequest(string Channel, string Code);
 public sealed record ProfileUpdateRequest(string? FirstName, string? LastName, string? PanNumber, string? AadhaarNumber, string? MobileNumber, string? Email, string? Role);
-public sealed record ProfileStatusDto(bool IsProfileComplete, int CompletionPercentage, bool IsMobileVerified, bool IsEmailVerified, bool IsPanVerified, bool IsAadhaarVerified, bool BehavioralAssessmentCompleted, decimal BehavioralScore, IReadOnlyList<string> MissingFields);
+public sealed record ProfileStatusDto(bool IsProfileComplete, int CompletionPercentage, bool IsMobileVerified, bool IsEmailVerified, bool IsPanVerified, bool IsAadhaarVerified, bool IsPanProvided, bool IsAadhaarProvided, bool BehavioralAssessmentCompleted, decimal BehavioralScore, IReadOnlyList<string> MissingFields);
 public sealed record BehavioralQuestionDto(Guid QuestionId, string Category, string QuestionText);
 public sealed record BehavioralAnswerRequest(Guid QuestionId, string Answer);
 public sealed record BehavioralAssessmentRequest(IReadOnlyList<BehavioralAnswerRequest> Answers);
-public sealed record BehavioralAssessmentResponse(bool Completed, decimal Score, IReadOnlyList<BehavioralQuestionDto> Questions);
+public sealed record BehavioralAssessmentResponse(bool Completed, decimal Score, IReadOnlyList<BehavioralQuestionDto> Questions, IReadOnlyList<BehavioralAnswerRequest> Answers);
 public sealed record AuthResponseDto(Guid UserId, string? FirstName, string CurrentRole, string Token, ProfileStatusDto ProfileStatus);
 public sealed record ProfileResponse(Guid UserId, string? FirstName, string? LastName, string? MobileNumber, string? Email, string? PanNumber, string? AadhaarNumber, bool MobileVerified, bool EmailVerified, bool PanVerified, bool AadhaarVerified, bool BehavioralAssessmentCompleted, decimal BehavioralScore, int ProfileCompletionScore, int RewardPoints, string CurrentRole, ProfileStatusDto ProfileStatus);
 public sealed record RoleUpdateRequest(string Role);
