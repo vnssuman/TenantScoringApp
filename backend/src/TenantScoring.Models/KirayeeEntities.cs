@@ -257,7 +257,13 @@ public sealed class Lease
     public ICollection<RentPayment> Payments { get; private set; } = new List<RentPayment>();
     public ICollection<OwnerFeedback> Feedback { get; private set; } = new List<OwnerFeedback>();
 
-    public void Accept() { Status = "Active"; StartDate = DateTime.UtcNow; }
+    public void Accept() { Status = "Active"; StartDate ??= DateTime.UtcNow; }
+    public void SetRentalTerms(DateTime startDate, DateTime endDate, string? agreementDocumentUrl)
+    {
+        StartDate = startDate;
+        EndDate = endDate;
+        AgreementDocumentUrl = agreementDocumentUrl;
+    }
     public void Reject() => Status = "Rejected";
     public void RequestCancellation() => Status = "CancellationRequested";
     public void Terminate() => Status = "Terminated";

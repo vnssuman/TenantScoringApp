@@ -57,4 +57,19 @@ public sealed class PropertyManagementTests
         Assert.Contains("\"monthly_rent\"", responseJson);
         Assert.Contains("\"is_vacant\"", responseJson);
     }
+
+    [Fact]
+    public void AcceptingRentalRequestPreservesRequestedRentalDates()
+    {
+        var startDate = new DateTime(2027, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var endDate = new DateTime(2027, 12, 31, 0, 0, 0, DateTimeKind.Utc);
+        var lease = new Lease(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 20000, 0);
+        lease.SetRentalTerms(startDate, endDate, null);
+
+        lease.Accept();
+
+        Assert.Equal("Active", lease.Status);
+        Assert.Equal(startDate, lease.StartDate);
+        Assert.Equal(endDate, lease.EndDate);
+    }
 }

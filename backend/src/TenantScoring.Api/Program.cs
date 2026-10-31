@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using System.Globalization;
 using TenantScoring.Core;
 using TenantScoring.Data;
 using TenantScoring.Models;
@@ -27,6 +28,7 @@ builder.Services.AddScoped<IKirayeeService, KirayeeService>();
 builder.Services.AddSingleton<IAuthenticationTokenStore, AuthenticationTokenStore>();
 
 var app = builder.Build();
+var agreementDocumentsDirectory = Path.Combine(app.Environment.ContentRootPath, "App_Data", "RentalAgreements");
 
 if (app.Environment.IsDevelopment())
 {
@@ -175,6 +177,86 @@ app.MapPut("/api/properties/{propertyId:guid}", async (HttpRequest request, Guid
     if (profile.CurrentRole is not ("Owner" or "Both")) return Results.Forbid();
     var property = await service.UpdateOwnerPropertyAsync(userId.Value, propertyId, body, cancellationToken);
     return property is null ? Results.BadRequest(new { message = "Property details are invalid or the property is unavailable." }) : Results.Ok(property);
+});
+
+app.MapGet("/api/tenants/search", async (HttpRequest request, string q, IKirayeeService service, CancellationToken cancellationToken) =>
+{
+    var ownerId = GetUserId(request);
+    if (ownerId is null) return Results.Unauthorized();
+    var tenants = await service.SearchTenantsAsync(ownerId.Value, q, cancellationToken);
+    return tenants is null ? Results.Forbid() : Results.Ok(tenants);
+});
+
+app.MapGet("/api/rental-requests", async (HttpRequest request, string? status, IKirayeeService service, CancellationToken cancellationToken) =>
+{
+    var ownerId = GetUserId(request);
+    if (ownerId is null) return Results.Unauthorized();
+    var requests = await service.GetOwnerRentalRequestsAsync(ownerId.Value, status, cancellationToken);
+    return requests is null ? Results.Forbid() : Results.Ok(requests);
+});
+
+app.MapPost("/api/rental-requests", async (HttpRequest request, IKirayeeService service, CancellationToken cancellationToken) =>
+{
+    var ownerId = GetUserId(request);
+    if (ownerId is null) return Results.Unauthorized();
+    var profile = await service.GetProfileAsync(ownerId.Value, cancellationToken);
+    if (profile is null) return Results.NotFound();
+    if (profile.CurrentRole is not ("Owner" or "Both")) return Results.Forbid();
+
+    var form = await request.ReadFormAsync(cancellationToken);
+    if (!Guid.TryParse(form["propertyId"], out var propertyId)
+        || !Guid.TryParse(form["tenantId"], out var tenantId)
+        || !decimal.TryParse(form["rentAmount"], NumberStyles.Number, CultureInfo.InvariantCulture, out var rentAmount)
+        || !DateTime.TryParse(form["startDate"], CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var startDate)
+        || !DateTime.TryParse(form["endDate"], CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var endDate))
+    {
+        return Results.BadRequest(new { message = "Select a property and tenant, and enter valid rent and rental dates." });
+    }
+
+    string? documentFileName = null;
+    var document = form.Files.GetFile("agreementDocument");
+    if (document is not null)
+    {
+        if (document.Length == 0 || document.Length > 5 * 1024 * 1024 || !string.Equals(Path.GetExtension(document.FileName), ".pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            return Results.BadRequest(new { message = "Agreement documents must be PDF files no larger than 5 MB." });
+        }
+
+        await using var uploadStream = document.OpenReadStream();
+        var pdfSignature = new byte[5];
+        if (await uploadStream.ReadAsync(pdfSignature, cancellationToken) != pdfSignature.Length || !pdfSignature.AsSpan().SequenceEqual("%PDF-"u8))
+        {
+            return Results.BadRequest(new { message = "The agreement document is not a valid PDF file." });
+        }
+        uploadStream.Position = 0;
+
+        Directory.CreateDirectory(agreementDocumentsDirectory);
+        documentFileName = $"{Guid.NewGuid():N}.pdf";
+        var documentPath = Path.Combine(agreementDocumentsDirectory, documentFileName);
+        await using var fileStream = File.Create(documentPath);
+        await uploadStream.CopyToAsync(fileStream, cancellationToken);
+    }
+
+    var created = await service.CreateRentalRequestAsync(ownerId.Value, propertyId, tenantId, rentAmount, startDate, endDate, documentFileName, cancellationToken);
+    if (created is null)
+    {
+        if (documentFileName is not null) File.Delete(Path.Combine(agreementDocumentsDirectory, documentFileName));
+        return Results.BadRequest(new { message = "The selected tenant or vacant property is not available for a rental request." });
+    }
+
+    return Results.Created($"/api/rental-requests/{created.LeaseId}", created);
+});
+
+app.MapGet("/api/rental-requests/{leaseId:guid}/document", async (HttpRequest request, Guid leaseId, IKirayeeService service, CancellationToken cancellationToken) =>
+{
+    var userId = GetUserId(request);
+    if (userId is null) return Results.Unauthorized();
+    var document = await service.GetRentalRequestDocumentAsync(userId.Value, leaseId, cancellationToken);
+    if (!document.IsAuthorized) return Results.Forbid();
+    if (string.IsNullOrWhiteSpace(document.DocumentPath)) return Results.NotFound();
+    var path = Path.GetFullPath(Path.Combine(agreementDocumentsDirectory, Path.GetFileName(document.DocumentPath)));
+    if (!path.StartsWith(Path.GetFullPath(agreementDocumentsDirectory) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !File.Exists(path)) return Results.NotFound();
+    return Results.File(path, "application/pdf", "rental-agreement.pdf");
 });
 
 app.MapPost("/api/kirayee/leases", async (HttpRequest request, LeaseRequest body, IKirayeeService service, CancellationToken cancellationToken) =>

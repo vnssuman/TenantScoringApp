@@ -6,7 +6,7 @@ namespace TenantScoring.Data;
 
 public sealed class KirayeeRepository(TenantDbContext dbContext) : IKirayeeRepository
 {
-    public Task<User?> FindUserAsync(Guid userId, CancellationToken cancellationToken) => dbContext.Users.AsTracking().SingleOrDefaultAsync(user => user.UserId == userId, cancellationToken);
+    public Task<User?> FindUserAsync(Guid userId, CancellationToken cancellationToken) => dbContext.Users.AsTracking().Include(user => user.Profile).SingleOrDefaultAsync(user => user.UserId == userId, cancellationToken);
     public Task<User?> FindUserByMobileAsync(string mobileNumber, CancellationToken cancellationToken) => dbContext.Users.AsTracking().SingleOrDefaultAsync(user => user.MobileNumber == mobileNumber, cancellationToken);
 
     public async Task AddUserAsync(User user, UserProfile profile, CancellationToken cancellationToken)
@@ -45,10 +45,41 @@ public sealed class KirayeeRepository(TenantDbContext dbContext) : IKirayeeRepos
     public async Task AddPropertyAsync(Property property, CancellationToken cancellationToken) { await dbContext.Properties.AddAsync(property, cancellationToken); await dbContext.SaveChangesAsync(cancellationToken); }
     public async Task<IReadOnlyList<Property>> GetPropertiesAsync(Guid? ownerId, CancellationToken cancellationToken) => await dbContext.Properties.AsNoTracking().Where(property => ownerId == null || property.OwnerId == ownerId).ToListAsync(cancellationToken);
     public Task<Property?> FindPropertyAsync(Guid propertyId, CancellationToken cancellationToken) => dbContext.Properties.SingleOrDefaultAsync(property => property.PropertyId == propertyId, cancellationToken);
+    public async Task<IReadOnlyList<User>> SearchTenantsAsync(string query, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return [];
+        var users = dbContext.Users.AsNoTracking().Include(user => user.Profile)
+            .Where(user => user.CurrentRole == "Tenant" || user.CurrentRole == "Both");
+        if (Guid.TryParse(query, out var userId))
+        {
+            return await users.Where(user => user.UserId == userId || user.Profile!.ProfileId == userId).Take(10).ToListAsync(cancellationToken);
+        }
+        if (query.StartsWith("TNT", StringComparison.OrdinalIgnoreCase))
+        {
+            var profilePrefix = query[3..].Trim();
+            if (profilePrefix.Length is > 0 and <= 8 && profilePrefix.All(Uri.IsHexDigit))
+            {
+                return await users.Where(user => user.Profile != null && user.Profile.ProfileId.ToString().StartsWith(profilePrefix))
+                    .Take(10).ToListAsync(cancellationToken);
+            }
+        }
+        return await users.Where(user => user.Profile != null
+                && ((user.Profile.FirstName ?? "").Contains(query)
+                    || (user.Profile.LastName ?? "").Contains(query)
+                    || ((user.Profile.FirstName ?? "") + " " + (user.Profile.LastName ?? "")).Contains(query)))
+            .OrderBy(user => user.Profile!.FirstName).Take(10).ToListAsync(cancellationToken);
+    }
+    public async Task<IReadOnlyList<Lease>> GetOwnerLeasesAsync(Guid ownerId, string? status, CancellationToken cancellationToken)
+    {
+        var query = dbContext.Leases.AsNoTracking().Include(lease => lease.Property).Include(lease => lease.Tenant).ThenInclude(tenant => tenant.Profile)
+            .Where(lease => lease.OwnerId == ownerId);
+        if (!string.IsNullOrWhiteSpace(status)) query = query.Where(lease => lease.Status == status);
+        return await query.OrderByDescending(lease => lease.CreatedAt).ToListAsync(cancellationToken);
+    }
     public async Task AddScoreAsync(TenantScore score, CancellationToken cancellationToken) { await dbContext.TenantScores.AddAsync(score, cancellationToken); await dbContext.SaveChangesAsync(cancellationToken); }
     public Task<TenantScore?> GetLatestScoreAsync(Guid tenantId, CancellationToken cancellationToken) => dbContext.TenantScores.Where(score => score.TenantId == tenantId).OrderByDescending(score => score.CalculatedAt).FirstOrDefaultAsync(cancellationToken);
     public async Task AddLeaseAsync(Lease lease, CancellationToken cancellationToken) { await dbContext.Leases.AddAsync(lease, cancellationToken); await dbContext.SaveChangesAsync(cancellationToken); }
-    public Task<Lease?> FindLeaseAsync(Guid leaseId, CancellationToken cancellationToken) => dbContext.Leases.Include(lease => lease.Property).SingleOrDefaultAsync(lease => lease.LeaseId == leaseId, cancellationToken);
+    public Task<Lease?> FindLeaseAsync(Guid leaseId, CancellationToken cancellationToken) => dbContext.Leases.Include(lease => lease.Property).Include(lease => lease.Tenant).ThenInclude(tenant => tenant.Profile).SingleOrDefaultAsync(lease => lease.LeaseId == leaseId, cancellationToken);
     public async Task<IReadOnlyList<Lease>> GetLeasesAsync(Guid userId, CancellationToken cancellationToken) => await dbContext.Leases.AsNoTracking().Where(lease => lease.TenantId == userId || lease.OwnerId == userId).ToListAsync(cancellationToken);
     public async Task AddPaymentAsync(RentPayment payment, CancellationToken cancellationToken) { await dbContext.RentPayments.AddAsync(payment, cancellationToken); await dbContext.SaveChangesAsync(cancellationToken); }
     public Task<RentPayment?> FindPaymentAsync(Guid paymentId, CancellationToken cancellationToken) => dbContext.RentPayments.SingleOrDefaultAsync(payment => payment.PaymentId == paymentId, cancellationToken);
