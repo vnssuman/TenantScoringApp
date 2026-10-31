@@ -64,7 +64,7 @@ export default function App(): ReactElement {
 		? <LoginUserPage onRegister={() => { setRegistrationNotice(sessionStorage.getItem('kirayeeRegistrationNotice') ?? ''); window.location.hash = 'register'; }} onLoggedIn={handleLoggedIn} />
 		: route === 'update-profile' && localStorage.getItem('kirayeeToken')
 			? <ProfileCompletionPage onComplete={handleProfileUpdated} onBack={() => { window.location.hash = 'home'; }} />
-		: route === 'home' && localStorage.getItem('kirayeeToken')
+		: (route === 'home' || ['/owner/map-tenant', '/owner/tenant-scores', '/owner/add-property', '/owner/feedback'].includes(route)) && localStorage.getItem('kirayeeToken')
 			? <ScoreDashboardPage onLogout={handleLogout} />
 		: route === 'register'
 			? <>
