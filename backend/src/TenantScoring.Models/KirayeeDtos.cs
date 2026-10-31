@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace TenantScoring.Models;
 
 public sealed record KirayeeRegisterRequest(string MobileNumber, string Email, string Pin, string ConfirmPin, string? FirstName, string? LastName);
@@ -18,6 +20,23 @@ public sealed record BankAccountRequest(string AccountHolderName, string BankNam
 public sealed record BankAccountResponse(Guid BankAccountId, string AccountHolderName, string BankName, string AccountNumber, string IFSCCode);
 public sealed record PropertyRequest(Guid? BankAccountId, string PropertyName, string Location, decimal RentAmount, decimal AdvanceAmount);
 public sealed record PropertyResponse(Guid PropertyId, string PropertyName, string Location, decimal RentAmount, decimal AdvanceAmount, string Status, Guid? BankAccountId);
+public sealed record PropertyManagementRequest(
+	[property: JsonPropertyName("property_name")] string PropertyName,
+	[property: JsonPropertyName("property_type")] string PropertyType,
+	[property: JsonPropertyName("address")] string Address,
+	[property: JsonPropertyName("city")] string City,
+	[property: JsonPropertyName("state")] string State,
+	[property: JsonPropertyName("monthly_rent")] decimal MonthlyRent,
+	[property: JsonPropertyName("is_vacant")] bool IsVacant);
+public sealed record PropertyManagementResponse(
+	[property: JsonPropertyName("id")] Guid Id,
+	[property: JsonPropertyName("property_name")] string PropertyName,
+	[property: JsonPropertyName("property_type")] string PropertyType,
+	[property: JsonPropertyName("address")] string Address,
+	[property: JsonPropertyName("city")] string City,
+	[property: JsonPropertyName("state")] string State,
+	[property: JsonPropertyName("monthly_rent")] decimal MonthlyRent,
+	[property: JsonPropertyName("is_vacant")] bool IsVacant);
 public sealed record LeaseRequest(Guid PropertyId, decimal? AgreedRent, decimal? AgreedAdvance);
 public sealed record LeaseResponse(Guid LeaseId, Guid PropertyId, Guid TenantId, Guid OwnerId, decimal AgreedRent, decimal AgreedAdvance, string Status, DateTime? StartDate);
 public sealed record PaymentRequest(decimal Amount, string TransactionReference);

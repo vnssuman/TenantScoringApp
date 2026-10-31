@@ -133,13 +133,48 @@ app.MapPost("/api/kirayee/bank-accounts", async (HttpRequest request, BankAccoun
     return account is null ? Results.BadRequest(new { message = "Bank account details are invalid." }) : Results.Ok(account);
 });
 
-app.MapGet("/api/kirayee/properties", async (HttpRequest request, IKirayeeService service, CancellationToken cancellationToken) => Results.Ok(await service.GetPropertiesAsync(null, cancellationToken)));
+app.MapGet("/api/kirayee/properties", async (HttpRequest request, IKirayeeService service, CancellationToken cancellationToken) =>
+{
+    var userId = GetUserId(request);
+    return userId is null ? Results.Unauthorized() : Results.Ok(await service.GetPropertiesAsync(userId.Value, cancellationToken));
+});
 app.MapPost("/api/kirayee/properties", async (HttpRequest request, PropertyRequest body, IKirayeeService service, CancellationToken cancellationToken) =>
 {
     var userId = GetUserId(request);
     if (userId is null) return Results.Unauthorized();
     var property = await service.AddPropertyAsync(userId.Value, body, cancellationToken);
     return property is null ? Results.BadRequest(new { message = "Property details are invalid." }) : Results.Created($"/api/kirayee/properties/{property.PropertyId}", property);
+});
+
+app.MapGet("/api/properties", async (HttpRequest request, Guid userId, IKirayeeService service, CancellationToken cancellationToken) =>
+{
+    var authenticatedUserId = GetUserId(request);
+    if (authenticatedUserId is null) return Results.Unauthorized();
+    if (authenticatedUserId.Value != userId) return Results.Forbid();
+    var properties = await service.GetOwnerPropertiesAsync(authenticatedUserId.Value, cancellationToken);
+    return properties is null ? Results.Forbid() : Results.Ok(properties);
+});
+
+app.MapPost("/api/properties", async (HttpRequest request, PropertyManagementRequest body, IKirayeeService service, CancellationToken cancellationToken) =>
+{
+    var userId = GetUserId(request);
+    if (userId is null) return Results.Unauthorized();
+    var profile = await service.GetProfileAsync(userId.Value, cancellationToken);
+    if (profile is null) return Results.NotFound();
+    if (profile.CurrentRole is not ("Owner" or "Both")) return Results.Forbid();
+    var property = await service.CreateOwnerPropertyAsync(userId.Value, body, cancellationToken);
+    return property is null ? Results.BadRequest(new { message = "Property details are invalid." }) : Results.Created($"/api/properties/{property.Id}", property);
+});
+
+app.MapPut("/api/properties/{propertyId:guid}", async (HttpRequest request, Guid propertyId, PropertyManagementRequest body, IKirayeeService service, CancellationToken cancellationToken) =>
+{
+    var userId = GetUserId(request);
+    if (userId is null) return Results.Unauthorized();
+    var profile = await service.GetProfileAsync(userId.Value, cancellationToken);
+    if (profile is null) return Results.NotFound();
+    if (profile.CurrentRole is not ("Owner" or "Both")) return Results.Forbid();
+    var property = await service.UpdateOwnerPropertyAsync(userId.Value, propertyId, body, cancellationToken);
+    return property is null ? Results.BadRequest(new { message = "Property details are invalid or the property is unavailable." }) : Results.Ok(property);
 });
 
 app.MapPost("/api/kirayee/leases", async (HttpRequest request, LeaseRequest body, IKirayeeService service, CancellationToken cancellationToken) =>

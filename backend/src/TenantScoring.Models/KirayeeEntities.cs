@@ -135,7 +135,23 @@ public sealed class Property
         RentAmount = rentAmount;
         AdvanceAmount = advanceAmount;
         Status = "Available";
+        PropertyType = "Apartment";
+        Address = location;
+        City = string.Empty;
+        State = string.Empty;
+        IsVacant = true;
         CreatedAt = DateTime.UtcNow;
+    }
+
+    public Property(Guid ownerId, string propertyName, string propertyType, string address, string city, string state, decimal monthlyRent, bool isVacant)
+        : this(ownerId, null, propertyName, FormatLocation(address, city, state), monthlyRent, 0)
+    {
+        PropertyType = propertyType;
+        Address = address;
+        City = city;
+        State = state;
+        IsVacant = isVacant;
+        Status = isVacant ? "Available" : "Leased";
     }
 
     public Guid PropertyId { get; private set; }
@@ -143,15 +159,39 @@ public sealed class Property
     public Guid? BankAccountId { get; private set; }
     public string PropertyName { get; private set; } = null!;
     public string Location { get; private set; } = null!;
+    public string PropertyType { get; private set; } = null!;
+    public string Address { get; private set; } = null!;
+    public string City { get; private set; } = null!;
+    public string State { get; private set; } = null!;
     public decimal RentAmount { get; private set; }
     public decimal AdvanceAmount { get; private set; }
+    public bool IsVacant { get; private set; }
     public string Status { get; private set; } = "Available";
     public DateTime CreatedAt { get; private set; }
     public User Owner { get; private set; } = null!;
     public OwnerBankAccount? BankAccount { get; private set; }
     public ICollection<Lease> Leases { get; private set; } = new List<Lease>();
 
-    public void SetStatus(string status) => Status = status;
+    public void UpdateDetails(string propertyName, string propertyType, string address, string city, string state, decimal monthlyRent, bool isVacant)
+    {
+        PropertyName = propertyName;
+        PropertyType = propertyType;
+        Address = address;
+        City = city;
+        State = state;
+        Location = FormatLocation(address, city, state);
+        RentAmount = monthlyRent;
+        IsVacant = isVacant;
+        if (Status is "Available" or "Leased") Status = isVacant ? "Available" : "Leased";
+    }
+
+    public void SetStatus(string status)
+    {
+        Status = status;
+        if (status is "Available" or "Leased") IsVacant = status == "Available";
+    }
+
+    private static string FormatLocation(string address, string city, string state) => string.Join(", ", new[] { address, city, state }.Where(part => !string.IsNullOrWhiteSpace(part)));
 }
 
 public sealed class TenantScore

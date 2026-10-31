@@ -43,6 +43,9 @@ public interface IKirayeeService
     Task<BankAccountResponse?> AddBankAccountAsync(Guid userId, BankAccountRequest request, CancellationToken cancellationToken = default);
     Task<PropertyResponse?> AddPropertyAsync(Guid userId, PropertyRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PropertyResponse>> GetPropertiesAsync(Guid? ownerId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PropertyManagementResponse>?> GetOwnerPropertiesAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<PropertyManagementResponse?> CreateOwnerPropertyAsync(Guid userId, PropertyManagementRequest request, CancellationToken cancellationToken = default);
+    Task<PropertyManagementResponse?> UpdateOwnerPropertyAsync(Guid userId, Guid propertyId, PropertyManagementRequest request, CancellationToken cancellationToken = default);
     Task<LeaseResponse?> CreateLeaseAsync(Guid tenantId, LeaseRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<LeaseResponse>> GetLeasesAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<LeaseResponse?> ChangeLeaseStatusAsync(Guid userId, Guid leaseId, string action, CancellationToken cancellationToken = default);
@@ -178,7 +181,8 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
 
     public async Task<PropertyResponse?> AddPropertyAsync(Guid userId, PropertyRequest request, CancellationToken cancellationToken = default)
     {
-        if (await repository.FindUserAsync(userId, cancellationToken) is null || request.RentAmount <= 0 || request.AdvanceAmount < 0 || string.IsNullOrWhiteSpace(request.PropertyName) || string.IsNullOrWhiteSpace(request.Location)) return null;
+        var user = await repository.FindUserAsync(userId, cancellationToken);
+        if (user is null || user.CurrentRole is not ("Owner" or "Both") || request.RentAmount <= 0 || request.AdvanceAmount < 0 || string.IsNullOrWhiteSpace(request.PropertyName) || string.IsNullOrWhiteSpace(request.Location)) return null;
         var property = new Property(userId, request.BankAccountId, request.PropertyName.Trim(), request.Location.Trim(), request.RentAmount, request.AdvanceAmount);
         await repository.AddPropertyAsync(property, cancellationToken);
         return ToProperty(property);
@@ -186,6 +190,34 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
 
     public async Task<IReadOnlyList<PropertyResponse>> GetPropertiesAsync(Guid? ownerId, CancellationToken cancellationToken = default) =>
         (await repository.GetPropertiesAsync(ownerId, cancellationToken)).Select(ToProperty).ToArray();
+
+    public async Task<IReadOnlyList<PropertyManagementResponse>?> GetOwnerPropertiesAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var user = await repository.FindUserAsync(userId, cancellationToken);
+        if (user is null || user.CurrentRole is not ("Owner" or "Both")) return null;
+        return (await repository.GetPropertiesAsync(userId, cancellationToken)).Select(ToPropertyManagement).ToArray();
+    }
+
+    public async Task<PropertyManagementResponse?> CreateOwnerPropertyAsync(Guid userId, PropertyManagementRequest request, CancellationToken cancellationToken = default)
+    {
+        var user = await repository.FindUserAsync(userId, cancellationToken);
+        if (user is null || user.CurrentRole is not ("Owner" or "Both") || !ValidPropertyRequest(request)) return null;
+
+        var property = new Property(userId, request.PropertyName.Trim(), request.PropertyType, request.Address.Trim(), request.City.Trim(), request.State.Trim(), request.MonthlyRent, request.IsVacant);
+        await repository.AddPropertyAsync(property, cancellationToken);
+        return ToPropertyManagement(property);
+    }
+
+    public async Task<PropertyManagementResponse?> UpdateOwnerPropertyAsync(Guid userId, Guid propertyId, PropertyManagementRequest request, CancellationToken cancellationToken = default)
+    {
+        var user = await repository.FindUserAsync(userId, cancellationToken);
+        var property = await repository.FindPropertyAsync(propertyId, cancellationToken);
+        if (user is null || user.CurrentRole is not ("Owner" or "Both") || property is null || property.OwnerId != userId || !ValidPropertyRequest(request)) return null;
+
+        property.UpdateDetails(request.PropertyName.Trim(), request.PropertyType, request.Address.Trim(), request.City.Trim(), request.State.Trim(), request.MonthlyRent, request.IsVacant);
+        await repository.SaveChangesAsync(cancellationToken);
+        return ToPropertyManagement(property);
+    }
 
     public async Task<LeaseResponse?> CreateLeaseAsync(Guid tenantId, LeaseRequest request, CancellationToken cancellationToken = default)
     {
@@ -251,5 +283,14 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
 
     private static bool ValidScore(ScoreRequest request) => new[] { request.CreditScore, request.PaymentHistory, request.OwnerFeedback }.All(value => value is >= 0 and <= 100);
     private static PropertyResponse ToProperty(Property property) => new(property.PropertyId, property.PropertyName, property.Location, property.RentAmount, property.AdvanceAmount, property.Status, property.BankAccountId);
+    private static PropertyManagementResponse ToPropertyManagement(Property property) => new(property.PropertyId, property.PropertyName, property.PropertyType, property.Address, property.City, property.State, property.RentAmount, property.IsVacant);
+    private static bool ValidPropertyRequest(PropertyManagementRequest request) =>
+        !string.IsNullOrWhiteSpace(request.PropertyName) && request.PropertyName.Trim().Length <= 150
+        && request.PropertyType is "Apartment" or "Villa" or "Independent House"
+        && !string.IsNullOrWhiteSpace(request.Address) && request.Address.Trim().Length <= 255
+        && !string.IsNullOrWhiteSpace(request.City) && request.City.Trim().Length <= 100
+        && !string.IsNullOrWhiteSpace(request.State) && request.State.Trim().Length <= 100
+        && string.Join(", ", new[] { request.Address.Trim(), request.City.Trim(), request.State.Trim() }).Length <= 512
+        && request.MonthlyRent > 0;
     private static LeaseResponse ToLease(Lease lease) => new(lease.LeaseId, lease.PropertyId, lease.TenantId, lease.OwnerId, lease.AgreedRent, lease.AgreedAdvance, lease.Status, lease.StartDate);
 }

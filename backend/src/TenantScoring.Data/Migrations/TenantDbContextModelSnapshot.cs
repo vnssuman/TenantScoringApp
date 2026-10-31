@@ -22,6 +22,67 @@ namespace TenantScoring.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("TenantScoring.Models.BehavioralQuestion", b =>
+                {
+                    b.Property<Guid>("QuestionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PreferredAnswer")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<string>("QuestionText")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int>("WeightPoints")
+                        .HasColumnType("int");
+
+                    b.HasKey("QuestionId");
+
+                    b.ToTable("BehavioralQuestions", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            QuestionId = new Guid("11111111-1111-1111-1111-111111111111"),
+                            Category = "Eviction & Disputes",
+                            IsActive = true,
+                            PreferredAnswer = "No",
+                            QuestionText = "Have you ever been served an eviction notice or had a legal dispute with a landlord?",
+                            WeightPoints = 33
+                        },
+                        new
+                        {
+                            QuestionId = new Guid("22222222-2222-2222-2222-222222222222"),
+                            Category = "Subletting Intent",
+                            IsActive = true,
+                            PreferredAnswer = "No",
+                            QuestionText = "Do you plan to sublet any part of the rented property to third parties?",
+                            WeightPoints = 33
+                        },
+                        new
+                        {
+                            QuestionId = new Guid("33333333-3333-3333-3333-333333333333"),
+                            Category = "Smoking Policy",
+                            IsActive = true,
+                            PreferredAnswer = "No",
+                            QuestionText = "Do you smoke or use tobacco products inside residential premises?",
+                            WeightPoints = 34
+                        });
+                });
+
             modelBuilder.Entity("TenantScoring.Models.Lease", b =>
                 {
                     b.Property<Guid>("LeaseId")
@@ -156,6 +217,11 @@ namespace TenantScoring.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
                     b.Property<decimal>("AdvanceAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -163,13 +229,21 @@ namespace TenantScoring.Data.Migrations
                     b.Property<Guid?>("BankAccountId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsVacant")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Location")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
 
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uniqueidentifier");
@@ -179,9 +253,19 @@ namespace TenantScoring.Data.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
+                    b.Property<string>("PropertyType")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
                     b.Property<decimal>("RentAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -281,6 +365,39 @@ namespace TenantScoring.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("TenantApplications", (string)null);
+                });
+
+            modelBuilder.Entity("TenantScoring.Models.TenantBehavioralResponse", b =>
+                {
+                    b.Property<Guid>("ResponseId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("AnsweredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PointsEarned")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("UserAnswer")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ResponseId");
+
+                    b.HasIndex("QuestionId");
+
+                    b.HasIndex("UserId", "QuestionId")
+                        .IsUnique();
+
+                    b.ToTable("TenantBehavioralResponses", (string)null);
                 });
 
             modelBuilder.Entity("TenantScoring.Models.TenantScore", b =>
@@ -385,6 +502,13 @@ namespace TenantScoring.Data.Migrations
 
                     b.Property<bool>("AadhaarVerified")
                         .HasColumnType("bit");
+
+                    b.Property<bool>("BehavioralAssessmentCompleted")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("BehavioralScore")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
 
                     b.Property<string>("FirstName")
                         .HasMaxLength(100)
@@ -515,6 +639,25 @@ namespace TenantScoring.Data.Migrations
                     b.Navigation("Lease");
                 });
 
+            modelBuilder.Entity("TenantScoring.Models.TenantBehavioralResponse", b =>
+                {
+                    b.HasOne("TenantScoring.Models.BehavioralQuestion", "Question")
+                        .WithMany("Responses")
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TenantScoring.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Question");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("TenantScoring.Models.TenantScore", b =>
                 {
                     b.HasOne("TenantScoring.Models.User", "Tenant")
@@ -535,6 +678,11 @@ namespace TenantScoring.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TenantScoring.Models.BehavioralQuestion", b =>
+                {
+                    b.Navigation("Responses");
                 });
 
             modelBuilder.Entity("TenantScoring.Models.Lease", b =>

@@ -67,7 +67,7 @@ export default function App(): ReactElement {
 		: route === 'update-profile' && localStorage.getItem('kirayeeToken')
 			? <ProfileCompletionPage onComplete={handleProfileUpdated} onBack={() => { window.location.hash = 'home'; }} />
 		: dashboardRoutes.includes(route) && localStorage.getItem('kirayeeToken')
-					? <ScoreDashboardPage onLogout={handleLogout} />
+					? <ScoreDashboardPage onLogout={handleLogout} showProperties={route === '/owner/add-property'} />
 		: route === 'register'
 			? <>
 				<div className="brand-logo" aria-label="Kirayee">Kirayee</div>

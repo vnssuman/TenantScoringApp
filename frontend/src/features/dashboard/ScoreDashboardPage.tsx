@@ -4,13 +4,14 @@ import { getDashboardSummary } from '../../services/dashboardApi';
 import { getCurrentProfile } from '../../services/profileApi';
 import type { DashboardUserSummary } from '../../types/dashboard';
 import type { UserProfile } from '../../types/profile';
+import { OwnerPropertiesPage } from '../properties/OwnerPropertiesPage';
 import { ExplorerActionsGrid } from './ExplorerActionsGrid';
 
-interface ScoreDashboardPageProps { onLogout: () => void; }
+interface ScoreDashboardPageProps { onLogout: () => void; showProperties?: boolean; }
 type Tab = 'home' | 'explore' | 'activity' | 'profile';
 type Role = 'tenant' | 'owner';
 
-export function ScoreDashboardPage({ onLogout }: ScoreDashboardPageProps): ReactElement {
+export function ScoreDashboardPage({ onLogout, showProperties = false }: ScoreDashboardPageProps): ReactElement {
   const [summary, setSummary] = useState<DashboardUserSummary | null>(null);
   const [error, setError] = useState('');
   const [tab, setTab] = useState<Tab>('home');
@@ -29,19 +30,26 @@ export function ScoreDashboardPage({ onLogout }: ScoreDashboardPageProps): React
     }).catch(() => undefined);
   }, []);
 
+  function navigateToTab(nextTab: Tab): void {
+    setTab(nextTab);
+    if (showProperties) window.location.hash = 'home';
+  }
+
   if (error) return <section className="dashboard-state" role="alert"><ShieldCheck size={34} aria-hidden="true" /><h1>Session unavailable</h1><p>{error}</p><button className="dashboard-primary-button" type="button" onClick={onLogout}>Back to Login</button></section>;
   if (!summary) return <section className="dashboard-state" aria-live="polite"><RefreshCw className="spin" size={30} aria-hidden="true" /><p>Loading your Kirayee space...</p></section>;
 
   return <section className="mobile-dashboard" aria-label="Kirayee dashboard">
     <header className="mobile-header"><div className="dashboard-brand"><span className="dashboard-brand-mark">K</span><span>Kirayee</span></div><div className="header-actions">{profile && !profile.profileStatus.isProfileComplete && <button className="completion-chip" type="button" onClick={() => { window.location.hash = 'update-profile'; }}>Profile {profile.profileStatus.completionPercentage}%</button>}<button className="icon-button" type="button" aria-label="Notifications"><Bell size={19} /></button><button className="icon-button" type="button" aria-label="Log out" onClick={onLogout}><LogOut size={18} /></button></div></header>
     {profile && !profile.profileStatus.isProfileComplete && <button className="profile-alert" type="button" onClick={() => { window.location.hash = 'update-profile'; }}><ShieldCheck size={17} /><span><strong>Complete your profile</strong><small>{profile.profileStatus.completionPercentage}% complete · {profile.profileStatus.missingFields.join(', ')} pending</small></span><ChevronRight size={17} /></button>}
-      {tab === 'home' && <HomeTab summary={summary} role={role} showRoleSwitch={profile?.currentRole.toLowerCase() === 'both'} onRoleChange={setRole} />}
-      {tab === 'explore' && (profile
+      {showProperties
+        ? <OwnerPropertiesPage onBack={() => { setTab('explore'); window.location.hash = 'home'; }} />
+        : tab === 'home' && <HomeTab summary={summary} role={role} showRoleSwitch={profile?.currentRole.toLowerCase() === 'both'} onRoleChange={setRole} />}
+      {!showProperties && tab === 'explore' && (profile
         ? <ExplorerActionsGrid role={profile.currentRole.toLowerCase() === 'both' ? 'both' : role} />
         : <section className="dashboard-state" aria-live="polite"><RefreshCw className="spin" size={24} aria-hidden="true" /><p>Loading your profile...</p></section>)}
-    {tab === 'activity' && <SimpleTab icon={<WalletCards size={26} />} title="Your activity" copy="Payments, proposals, and lease updates will appear here." action="View payment history" />}
-    {tab === 'profile' && <ProfileTab summary={summary} profile={profile} />}
-    <nav className="bottom-nav" aria-label="Main navigation"><NavButton active={tab === 'home'} icon={<Home size={20} />} label="Home" onClick={() => setTab('home')} /><NavButton active={tab === 'explore'} icon={<Building2 size={20} />} label="Explore" onClick={() => setTab('explore')} /><NavButton active={tab === 'activity'} icon={<CreditCard size={20} />} label="Activity" onClick={() => setTab('activity')} /><NavButton active={tab === 'profile'} icon={<CircleUserRound size={20} />} label="Profile" onClick={() => setTab('profile')} /></nav>
+    {!showProperties && tab === 'activity' && <SimpleTab icon={<WalletCards size={26} />} title="Your activity" copy="Payments, proposals, and lease updates will appear here." action="View payment history" />}
+    {!showProperties && tab === 'profile' && <ProfileTab summary={summary} profile={profile} />}
+    <nav className="bottom-nav" aria-label="Main navigation"><NavButton active={!showProperties && tab === 'home'} icon={<Home size={20} />} label="Home" onClick={() => navigateToTab('home')} /><NavButton active={showProperties || tab === 'explore'} icon={<Building2 size={20} />} label="Explore" onClick={() => navigateToTab('explore')} /><NavButton active={!showProperties && tab === 'activity'} icon={<CreditCard size={20} />} label="Activity" onClick={() => navigateToTab('activity')} /><NavButton active={!showProperties && tab === 'profile'} icon={<CircleUserRound size={20} />} label="Profile" onClick={() => navigateToTab('profile')} /></nav>
   </section>;
 }
 

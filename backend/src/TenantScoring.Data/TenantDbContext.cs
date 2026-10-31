@@ -89,7 +89,11 @@ public sealed class TenantDbContext(DbContextOptions<TenantDbContext> options) :
         property.ToTable("Properties");
         property.HasKey(item => item.PropertyId);
         property.Property(item => item.PropertyName).HasMaxLength(150).IsRequired();
-        property.Property(item => item.Location).HasMaxLength(255).IsRequired();
+        property.Property(item => item.Location).HasMaxLength(512).IsRequired();
+        property.Property(item => item.PropertyType).HasMaxLength(40).IsRequired();
+        property.Property(item => item.Address).HasMaxLength(255).IsRequired();
+        property.Property(item => item.City).HasMaxLength(100).IsRequired();
+        property.Property(item => item.State).HasMaxLength(100).IsRequired();
         property.Property(item => item.RentAmount).HasPrecision(18, 2);
         property.Property(item => item.AdvanceAmount).HasPrecision(18, 2);
         property.HasOne(item => item.Owner).WithMany(item => item.Properties).HasForeignKey(item => item.OwnerId).OnDelete(DeleteBehavior.Restrict);

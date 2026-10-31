@@ -176,3 +176,39 @@ button { cursor: pointer; }
 .owner-action-tile.gold .owner-action-link { color: #a47a1e; }
 @media (min-width: 700px) { .dashboard-card { min-height: auto; border-radius: 16px; } .mobile-dashboard { min-height: 720px; } }
 @media (max-width: 619px) { .owner-actions-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }.owner-action-tile { min-height: 185px; padding: 14px; } }
+.properties-page { min-height: calc(100vh - 86px); }
+.properties-back { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 18px; padding: 0; border: 0; color: #527268; background: transparent; font-size: 12px; font-weight: 700; }
+.properties-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.properties-header h1 { margin: 0; color: #24433c; font: 600 21px/1.2 'Space Grotesk', sans-serif; }
+.properties-add-button { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: 6px; padding: 0 12px; border: 0; border-radius: 8px; color: #fff; background: #226d5b; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.properties-add-button:hover { background: #195a4a; }
+.properties-add-button:disabled { cursor: wait; opacity: .65; }
+.properties-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.property-card { display: flex; min-width: 0; min-height: 212px; flex-direction: column; align-items: flex-start; gap: 10px; padding: 15px; border: 1px solid #e1e9e2; border-radius: 10px; color: inherit; background: #fff; box-shadow: 0 4px 12px rgba(38, 70, 59, .05); text-align: left; transition: transform 160ms ease, box-shadow 160ms ease; }
+.property-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(38, 70, 59, .1); }
+.property-type-badge, .property-vacancy { display: inline-flex; align-items: center; min-height: 23px; padding: 0 8px; border-radius: 99px; font-size: 10px; font-weight: 700; }
+.property-type-badge { color: #19765f; background: #e8f8f0; }
+.property-type-badge.villa { color: #7041d8; background: #f3e8ff; }
+.property-type-badge.independent-house { color: #3170b8; background: #e0f2fe; }
+.property-name { color: #24433c; font: 600 15px/1.3 'Space Grotesk', sans-serif; }
+.property-detail { display: flex; align-items: flex-start; gap: 6px; color: #71837b; font-size: 11px; line-height: 1.4; }
+.property-detail svg { flex: 0 0 auto; color: #648277; }
+.property-vacancy { margin-top: auto; }
+.property-vacancy.vacant { color: #19765f; background: #e8f8f0; }
+.property-vacancy.occupied { color: #9a6b1a; background: #fff4d6; }
+.properties-empty { display: grid; justify-items: center; gap: 12px; padding: 44px 18px; border: 1px dashed #cbd9ce; border-radius: 10px; color: #71837b; background: rgba(255,255,255,.55); font-size: 13px; }
+.properties-empty button { padding: 0; border: 0; color: #226d5b; background: transparent; font-size: 12px; font-weight: 700; }
+.properties-error { margin: 12px 0; padding: 11px 12px; border-left: 3px solid #c65b48; color: #8f3428; background: #fae9e4; font-size: 12px; line-height: 1.4; }
+.property-form-view { padding-top: 6px; }
+.property-form-title { margin: 0 0 22px; color: #24433c; font: 600 24px/1.2 'Space Grotesk', sans-serif; }
+.property-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.property-field { display: flex; min-width: 0; flex-direction: column; gap: 6px; color: #456258; font-size: 11px; font-weight: 700; }
+.property-field-full { grid-column: 1 / -1; }
+.property-field input, .property-field select, .property-field textarea { width: 100%; min-height: 42px; padding: 10px 11px; border: 1px solid #d4dfd6; border-radius: 7px; outline: none; color: #24433c; background: #fff; font-size: 12px; font-weight: 400; }
+.property-field textarea { min-height: 82px; resize: vertical; }
+.property-field input:focus, .property-field select:focus, .property-field textarea:focus { border-color: #39836c; box-shadow: 0 0 0 3px rgba(34, 109, 91, .12); }
+.property-vacancy-toggle { display: flex; grid-column: 1 / -1; align-items: center; gap: 9px; color: #456258; font-size: 12px; }
+.property-vacancy-toggle input { width: 17px; height: 17px; accent-color: #226d5b; }
+.property-form-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 6px; }
+.property-cancel-button { min-height: 40px; padding: 0 14px; border: 1px solid #d4dfd6; border-radius: 8px; color: #527268; background: #fff; font-size: 11px; font-weight: 700; }
+@media (max-width: 430px) { .properties-header { align-items: flex-start; flex-direction: column; }.properties-add-button { min-height: 38px; }.properties-grid { grid-template-columns: 1fr; }.property-card { min-height: 190px; } }
