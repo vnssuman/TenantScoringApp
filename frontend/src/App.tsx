@@ -8,6 +8,8 @@ import type { LoginResponse, ProfileStatus } from './types/auth';
 import type { UserProfile } from './types/profile';
 import './styles.css';
 
+const dashboardRoutes = ['home', '/owner/map-tenant', '/owner/tenant-scores', '/owner/add-property', '/owner/feedback', '/tenant/rental-requests', '/tenant/payments', '/tenant/rental-history'];
+
 export default function App(): ReactElement {
 	const [route, setRoute] = useState(() => window.location.hash.replace('#', '') || 'login');
 	const [registrationNotice, setRegistrationNotice] = useState(() => sessionStorage.getItem('kirayeeRegistrationNotice') ?? '');
@@ -23,7 +25,7 @@ export default function App(): ReactElement {
 	}, []);
 
 	useEffect(() => {
-		if (!localStorage.getItem('kirayeeToken') || !['home', 'update-profile'].includes(route)) return;
+			if (!localStorage.getItem('kirayeeToken') || !['home', 'update-profile'].includes(route)) return; 
 		getCurrentProfile()
 			.then((profile) => {
 				setProfileStatus(profile.profileStatus);
@@ -64,8 +66,8 @@ export default function App(): ReactElement {
 		? <LoginUserPage onRegister={() => { setRegistrationNotice(sessionStorage.getItem('kirayeeRegistrationNotice') ?? ''); window.location.hash = 'register'; }} onLoggedIn={handleLoggedIn} />
 		: route === 'update-profile' && localStorage.getItem('kirayeeToken')
 			? <ProfileCompletionPage onComplete={handleProfileUpdated} onBack={() => { window.location.hash = 'home'; }} />
-		: (route === 'home' || ['/owner/map-tenant', '/owner/tenant-scores', '/owner/add-property', '/owner/feedback'].includes(route)) && localStorage.getItem('kirayeeToken')
-			? <ScoreDashboardPage onLogout={handleLogout} />
+		: dashboardRoutes.includes(route) && localStorage.getItem('kirayeeToken')
+					? <ScoreDashboardPage onLogout={handleLogout} />
 		: route === 'register'
 			? <>
 				<div className="brand-logo" aria-label="Kirayee">Kirayee</div>
@@ -76,7 +78,7 @@ export default function App(): ReactElement {
 
 	return (
 		<main className="app-shell">
-			<section className={route === 'home' ? 'dashboard-card' : 'registration-card'} aria-label={route === 'home' ? 'Kirayee dashboard' : route === 'update-profile' ? 'Complete profile' : route === 'login' ? 'Kirayee login' : 'Kirayee registration'}>
+			<section className={dashboardRoutes.includes(route) ? 'dashboard-card' : 'registration-card'} aria-label={dashboardRoutes.includes(route) ? 'Kirayee dashboard' : route === 'update-profile' ? 'Complete profile' : route === 'login' ? 'Kirayee login' : 'Kirayee registration'}>
 				{content}
 			</section>
 		</main>

@@ -4,7 +4,7 @@ import { getDashboardSummary } from '../../services/dashboardApi';
 import { getCurrentProfile } from '../../services/profileApi';
 import type { DashboardUserSummary } from '../../types/dashboard';
 import type { UserProfile } from '../../types/profile';
-import { OwnerActionsGrid } from './OwnerActionsGrid';
+import { ExplorerActionsGrid } from './ExplorerActionsGrid';
 
 interface ScoreDashboardPageProps { onLogout: () => void; }
 type Tab = 'home' | 'explore' | 'activity' | 'profile';
@@ -18,7 +18,7 @@ export function ScoreDashboardPage({ onLogout }: ScoreDashboardPageProps): React
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('kirayeeToken');
+    const token = localStorage.getItem('kirayeeToken'); 
     if (!token) { setError('Your session has expired. Please log in again.'); return; }
     getDashboardSummary(token).then(setSummary).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Dashboard could not be loaded.'));
     getCurrentProfile().then((currentProfile) => {
@@ -35,8 +35,10 @@ export function ScoreDashboardPage({ onLogout }: ScoreDashboardPageProps): React
   return <section className="mobile-dashboard" aria-label="Kirayee dashboard">
     <header className="mobile-header"><div className="dashboard-brand"><span className="dashboard-brand-mark">K</span><span>Kirayee</span></div><div className="header-actions">{profile && !profile.profileStatus.isProfileComplete && <button className="completion-chip" type="button" onClick={() => { window.location.hash = 'update-profile'; }}>Profile {profile.profileStatus.completionPercentage}%</button>}<button className="icon-button" type="button" aria-label="Notifications"><Bell size={19} /></button><button className="icon-button" type="button" aria-label="Log out" onClick={onLogout}><LogOut size={18} /></button></div></header>
     {profile && !profile.profileStatus.isProfileComplete && <button className="profile-alert" type="button" onClick={() => { window.location.hash = 'update-profile'; }}><ShieldCheck size={17} /><span><strong>Complete your profile</strong><small>{profile.profileStatus.completionPercentage}% complete · {profile.profileStatus.missingFields.join(', ')} pending</small></span><ChevronRight size={17} /></button>}
-    {tab === 'home' && <HomeTab summary={summary} role={role} showRoleSwitch={profile?.currentRole.toLowerCase() === 'both'} onRoleChange={setRole} />}
-    {tab === 'explore' && (role === 'owner' ? <OwnerActionsGrid /> : <SimpleTab icon={<Building2 size={26} />} title="Find your next place" copy="Browse available homes and send a proposal when the fit feels right." action="Explore properties" />)}
+      {tab === 'home' && <HomeTab summary={summary} role={role} showRoleSwitch={profile?.currentRole.toLowerCase() === 'both'} onRoleChange={setRole} />}
+      {tab === 'explore' && (profile
+        ? <ExplorerActionsGrid role={profile.currentRole.toLowerCase() === 'both' ? 'both' : role} />
+        : <section className="dashboard-state" aria-live="polite"><RefreshCw className="spin" size={24} aria-hidden="true" /><p>Loading your profile...</p></section>)}
     {tab === 'activity' && <SimpleTab icon={<WalletCards size={26} />} title="Your activity" copy="Payments, proposals, and lease updates will appear here." action="View payment history" />}
     {tab === 'profile' && <ProfileTab summary={summary} profile={profile} />}
     <nav className="bottom-nav" aria-label="Main navigation"><NavButton active={tab === 'home'} icon={<Home size={20} />} label="Home" onClick={() => setTab('home')} /><NavButton active={tab === 'explore'} icon={<Building2 size={20} />} label="Explore" onClick={() => setTab('explore')} /><NavButton active={tab === 'activity'} icon={<CreditCard size={20} />} label="Activity" onClick={() => setTab('activity')} /><NavButton active={tab === 'profile'} icon={<CircleUserRound size={20} />} label="Profile" onClick={() => setTab('profile')} /></nav>
