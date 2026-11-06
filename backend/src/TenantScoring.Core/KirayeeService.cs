@@ -9,6 +9,7 @@ public interface IKirayeeRepository
 {
     Task<User?> FindUserAsync(Guid userId, CancellationToken cancellationToken);
     Task<User?> FindUserByMobileAsync(string mobileNumber, CancellationToken cancellationToken);
+    Task<User?> FindUserByEmailAsync(string email, CancellationToken cancellationToken);
     Task AddUserAsync(User user, UserProfile profile, CancellationToken cancellationToken);
     Task<UserProfile?> FindProfileAsync(Guid userId, CancellationToken cancellationToken);
     Task<List<BehavioralQuestion>> GetBehavioralQuestionsAsync(CancellationToken cancellationToken);
@@ -21,6 +22,7 @@ public interface IKirayeeRepository
     Task<Property?> FindPropertyAsync(Guid propertyId, CancellationToken cancellationToken);
     Task<IReadOnlyList<User>> SearchTenantsAsync(string query, CancellationToken cancellationToken);
     Task<IReadOnlyList<Lease>> GetOwnerLeasesAsync(Guid ownerId, string? status, CancellationToken cancellationToken);
+    Task<IReadOnlyList<Lease>> GetTenantRentalRequestsAsync(Guid tenantId, string? status, CancellationToken cancellationToken);
     Task AddScoreAsync(TenantScore score, CancellationToken cancellationToken);
     Task<TenantScore?> GetLatestScoreAsync(Guid tenantId, CancellationToken cancellationToken);
     Task AddLeaseAsync(Lease lease, CancellationToken cancellationToken);
@@ -33,7 +35,7 @@ public interface IKirayeeRepository
 
 public interface IKirayeeService
 {
-    Task<KirayeeRegisterResponse?> RegisterAsync(KirayeeRegisterRequest request, CancellationToken cancellationToken = default);
+    Task<KirayeeRegistrationResult> RegisterAsync(KirayeeRegisterRequest request, CancellationToken cancellationToken = default);
     Task<ProfileResponse?> GetProfileAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<ProfileStatusDto?> GetProfileStatusAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<BehavioralAssessmentResponse?> GetBehavioralAssessmentAsync(Guid userId, CancellationToken cancellationToken = default);
@@ -50,6 +52,8 @@ public interface IKirayeeService
     Task<PropertyManagementResponse?> UpdateOwnerPropertyAsync(Guid userId, Guid propertyId, PropertyManagementRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TenantLookupResponse>?> SearchTenantsAsync(Guid ownerId, string query, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RentalRequestResponse>?> GetOwnerRentalRequestsAsync(Guid ownerId, string? status, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TenantRentalRequestResponse>?> GetTenantRentalRequestsAsync(Guid tenantId, string? status, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TenantRentalRequestResponse>?> GetTenantRentalHistoryAsync(Guid tenantId, CancellationToken cancellationToken = default);
     Task<RentalRequestResponse?> CreateRentalRequestAsync(Guid ownerId, Guid propertyId, Guid tenantId, decimal rentAmount, DateTime startDate, DateTime endDate, string? documentPath, CancellationToken cancellationToken = default);
     Task<(string? DocumentPath, bool IsAuthorized)> GetRentalRequestDocumentAsync(Guid userId, Guid leaseId, CancellationToken cancellationToken = default);
     Task<LeaseResponse?> CreateLeaseAsync(Guid tenantId, LeaseRequest request, CancellationToken cancellationToken = default);
@@ -60,16 +64,24 @@ public interface IKirayeeService
 
 public sealed class KirayeeService(IKirayeeRepository repository, ILogger<KirayeeService> logger) : IKirayeeService
 {
-    public async Task<KirayeeRegisterResponse?> RegisterAsync(KirayeeRegisterRequest request, CancellationToken cancellationToken = default)
+    public async Task<KirayeeRegistrationResult> RegisterAsync(KirayeeRegisterRequest request, CancellationToken cancellationToken = default)
     {
-        if (!Regex.IsMatch(request.MobileNumber.Trim(), "^\\d{10,15}$") || !Regex.IsMatch(request.Email.Trim(), "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) return null;
-        if (request.Pin.Length != 4 || request.Pin != request.ConfirmPin || request.Pin.Any(character => character is < '0' or > '9')) return null;
-        if (await repository.FindUserByMobileAsync(request.MobileNumber.Trim(), cancellationToken) is not null) return null;
+        if (!Regex.IsMatch(request.MobileNumber.Trim(), "^\\d{10,15}$") || !Regex.IsMatch(request.Email.Trim(), "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"))
+            return new KirayeeRegistrationResult(null, "Registration details are invalid.");
+        if (request.Pin.Length != 4 || request.Pin != request.ConfirmPin || request.Pin.Any(character => character is < '0' or > '9'))
+            return new KirayeeRegistrationResult(null, "Registration details are invalid.");
+        var email = request.Email.Trim().ToLowerInvariant();
+        if (await repository.FindUserByMobileAsync(request.MobileNumber.Trim(), cancellationToken) is not null)
+            return new KirayeeRegistrationResult(null, "Mobile number is already registered.");
+        if (await repository.FindUserByEmailAsync(email, cancellationToken) is not null)
+            return new KirayeeRegistrationResult(null, "Email ID is already registered.");
 
-        var user = new User(request.MobileNumber.Trim(), request.Email.Trim().ToLowerInvariant(), BCrypt.Net.BCrypt.HashPassword(request.Pin));
+        var user = new User(request.MobileNumber.Trim(), email, BCrypt.Net.BCrypt.HashPassword(request.Pin));
         await repository.AddUserAsync(user, new UserProfile(user.UserId, request.FirstName, request.LastName), cancellationToken);
         logger.LogInformation("Registered Kirayee user {UserId}", user.UserId);
-        return new KirayeeRegisterResponse(user.UserId, "Account created. Verify your mobile and email to continue.");
+        return new KirayeeRegistrationResult(
+            new KirayeeRegisterResponse(user.UserId, "Account created. Verify your mobile and email to continue."),
+            null);
     }
 
     public async Task<ProfileResponse?> GetProfileAsync(Guid userId, CancellationToken cancellationToken = default) =>
@@ -241,6 +253,34 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
         return requests.Select(ToRentalRequest).ToArray();
     }
 
+    public async Task<IReadOnlyList<TenantRentalRequestResponse>?> GetTenantRentalRequestsAsync(Guid tenantId, string? status, CancellationToken cancellationToken = default)
+    {
+        var tenant = await repository.FindUserAsync(tenantId, cancellationToken);
+        if (tenant is null || tenant.CurrentRole is not ("Tenant" or "Both")) return null;
+        var requests = await repository.GetTenantRentalRequestsAsync(tenantId, status, cancellationToken);
+        return requests.Select(lease => new TenantRentalRequestResponse(
+            lease.LeaseId,
+            string.Join(" ", new[] { lease.Owner.Profile?.FirstName, lease.Owner.Profile?.LastName }.Where(name => !string.IsNullOrWhiteSpace(name))),
+            lease.Property.PropertyName,
+            lease.Property.PropertyType,
+            lease.Property.Address,
+            lease.Property.City,
+            lease.Property.State,
+            lease.AgreedRent,
+            lease.AgreedAdvance,
+            lease.StartDate,
+            lease.EndDate,
+            lease.CreatedAt,
+            lease.Status,
+            !string.IsNullOrWhiteSpace(lease.AgreementDocumentUrl))).ToArray();
+    }
+
+    public async Task<IReadOnlyList<TenantRentalRequestResponse>?> GetTenantRentalHistoryAsync(Guid tenantId, CancellationToken cancellationToken = default)
+    {
+        var rentals = await GetTenantRentalRequestsAsync(tenantId, null, cancellationToken);
+        return rentals?.Where(rental => rental.Status is "Active" or "CancellationRequested" or "Terminated").ToArray();
+    }
+
     public async Task<RentalRequestResponse?> CreateRentalRequestAsync(Guid ownerId, Guid propertyId, Guid tenantId, decimal rentAmount, DateTime startDate, DateTime endDate, string? documentPath, CancellationToken cancellationToken = default)
     {
         var owner = await repository.FindUserAsync(ownerId, cancellationToken);
@@ -283,6 +323,7 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
         {
             case "accept" when lease.TenantId == userId: lease.Accept(); lease.Property.SetStatus("Leased"); break;
             case "reject" when lease.TenantId == userId: lease.Reject(); break;
+            case "withdraw" when lease.OwnerId == userId && lease.Status == "Pending": lease.Withdraw(); break;
             case "cancel" when lease.Status is "Pending" or "Active": lease.RequestCancellation(); break;
             case "terminate" when lease.OwnerId == userId && lease.Status == "CancellationRequested": lease.Terminate(); lease.Property.SetStatus("Available"); break;
             default: return null;

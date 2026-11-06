@@ -72,4 +72,14 @@ public sealed class PropertyManagementTests
         Assert.Equal(startDate, lease.StartDate);
         Assert.Equal(endDate, lease.EndDate);
     }
+
+    [Fact]
+    public void WithdrawingPendingRentalRequestSetsWithdrawnStatus()
+    {
+        var lease = new Lease(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 20000, 0);
+
+        lease.Withdraw();
+
+        Assert.Equal("Withdrawn", lease.Status);
+    }
 }

@@ -51,7 +51,9 @@ Guid? GetUserId(HttpRequest request)
 app.MapPost("/api/kirayee/auth/register", async (KirayeeRegisterRequest request, IKirayeeService service, CancellationToken cancellationToken) =>
 {
     var result = await service.RegisterAsync(request, cancellationToken);
-    return result is null ? Results.BadRequest(new { message = "Registration details are invalid or already registered." }) : Results.Created($"/api/kirayee/users/{result.UserId}", result);
+    return result.Response is null
+        ? Results.BadRequest(new { message = result.ErrorMessage })
+        : Results.Created($"/api/kirayee/users/{result.Response.UserId}", result.Response);
 });
 
 app.MapPost("/api/kirayee/auth/login", async (LoginRequest request, IKirayeeRepository repository, IKirayeeService service, IAuthenticationTokenStore tokenStore, CancellationToken cancellationToken) =>
@@ -195,6 +197,22 @@ app.MapGet("/api/rental-requests", async (HttpRequest request, string? status, I
     return requests is null ? Results.Forbid() : Results.Ok(requests);
 });
 
+app.MapGet("/api/tenant/rental-requests", async (HttpRequest request, string? status, IKirayeeService service, CancellationToken cancellationToken) =>
+{
+    var tenantId = GetUserId(request);
+    if (tenantId is null) return Results.Unauthorized();
+    var requests = await service.GetTenantRentalRequestsAsync(tenantId.Value, status, cancellationToken);
+    return requests is null ? Results.Forbid() : Results.Ok(requests);
+});
+
+app.MapGet("/api/tenant/rental-history", async (HttpRequest request, IKirayeeService service, CancellationToken cancellationToken) =>
+{
+    var tenantId = GetUserId(request);
+    if (tenantId is null) return Results.Unauthorized();
+    var rentals = await service.GetTenantRentalHistoryAsync(tenantId.Value, cancellationToken);
+    return rentals is null ? Results.Forbid() : Results.Ok(rentals);
+});
+
 app.MapPost("/api/rental-requests", async (HttpRequest request, IKirayeeService service, CancellationToken cancellationToken) =>
 {
     var ownerId = GetUserId(request);
@@ -276,7 +294,7 @@ app.MapGet("/api/kirayee/leases", async (HttpRequest request, IKirayeeService se
 app.MapPost("/api/kirayee/leases/{leaseId:guid}/{action}", async (HttpRequest request, Guid leaseId, string action, IKirayeeService service, CancellationToken cancellationToken) =>
 {
     var userId = GetUserId(request);
-    if (userId is null) return Results.Unauthorized();
+    if (userId is null) return Results.Json(new { message = "Your session has expired. Please sign in again." }, statusCode: StatusCodes.Status401Unauthorized);
     var lease = await service.ChangeLeaseStatusAsync(userId.Value, leaseId, action, cancellationToken);
     return lease is null ? Results.BadRequest(new { message = "The lease action is not permitted." }) : Results.Ok(lease);
 });

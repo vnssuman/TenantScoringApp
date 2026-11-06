@@ -8,6 +8,7 @@ public sealed class KirayeeRepository(TenantDbContext dbContext) : IKirayeeRepos
 {
     public Task<User?> FindUserAsync(Guid userId, CancellationToken cancellationToken) => dbContext.Users.AsTracking().Include(user => user.Profile).SingleOrDefaultAsync(user => user.UserId == userId, cancellationToken);
     public Task<User?> FindUserByMobileAsync(string mobileNumber, CancellationToken cancellationToken) => dbContext.Users.AsTracking().SingleOrDefaultAsync(user => user.MobileNumber == mobileNumber, cancellationToken);
+    public Task<User?> FindUserByEmailAsync(string email, CancellationToken cancellationToken) => dbContext.Users.AsTracking().SingleOrDefaultAsync(user => user.Email == email, cancellationToken);
 
     public async Task AddUserAsync(User user, UserProfile profile, CancellationToken cancellationToken)
     {
@@ -73,6 +74,15 @@ public sealed class KirayeeRepository(TenantDbContext dbContext) : IKirayeeRepos
     {
         var query = dbContext.Leases.AsNoTracking().Include(lease => lease.Property).Include(lease => lease.Tenant).ThenInclude(tenant => tenant.Profile)
             .Where(lease => lease.OwnerId == ownerId);
+        if (!string.IsNullOrWhiteSpace(status)) query = query.Where(lease => lease.Status == status);
+        return await query.OrderByDescending(lease => lease.CreatedAt).ToListAsync(cancellationToken);
+    }
+    public async Task<IReadOnlyList<Lease>> GetTenantRentalRequestsAsync(Guid tenantId, string? status, CancellationToken cancellationToken)
+    {
+        var query = dbContext.Leases.AsNoTracking()
+            .Include(lease => lease.Property)
+            .Include(lease => lease.Owner).ThenInclude(owner => owner.Profile)
+            .Where(lease => lease.TenantId == tenantId);
         if (!string.IsNullOrWhiteSpace(status)) query = query.Where(lease => lease.Status == status);
         return await query.OrderByDescending(lease => lease.CreatedAt).ToListAsync(cancellationToken);
     }

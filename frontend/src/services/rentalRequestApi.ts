@@ -1,4 +1,4 @@
-import type { RentalRequestInput, RentalRequestRecord, TenantLookupResult } from '../types/rentalRequest';
+import type { RentalRequestInput, RentalRequestRecord, TenantLookupResult, TenantRentalRequestRecord } from '../types/rentalRequest';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
@@ -9,14 +9,41 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers: { Authorization: `Bearer ${token ?? ''}`, ...options.headers },
   });
   if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(payload?.message ?? 'Rental requests could not be loaded or saved.');
+    const body = await response.text().catch(() => '');
+    let message: string | undefined;
+    try {
+      message = (JSON.parse(body) as { message?: string } | null)?.message;
+    } catch {
+      message = undefined;
+    }
+    if (!message) {
+      message = response.status === 401
+        ? 'Your session has expired. Please sign in again.'
+        : response.status === 403
+          ? 'You are not allowed to perform this request action.'
+          : response.status === 404
+            ? 'The rental request action endpoint was not found. Restart the API and try again.'
+            : `Rental request action failed (HTTP ${response.status}).`;
+    }
+    throw new Error(message);
   }
   return (await response.json()) as T;
 }
 
 export function getRentalRequests(status: 'Active' | 'Pending'): Promise<RentalRequestRecord[]> {
   return request<RentalRequestRecord[]>(`/api/rental-requests?status=${status}`);
+}
+
+export function getTenantRentalRequests(): Promise<TenantRentalRequestRecord[]> {
+  return request<TenantRentalRequestRecord[]>('/api/tenant/rental-requests');
+}
+
+export function getTenantRentalHistory(): Promise<TenantRentalRequestRecord[]> {
+  return request<TenantRentalRequestRecord[]>('/api/tenant/rental-history');
+}
+
+export function respondToRentalRequest(leaseId: string, action: 'accept' | 'reject'): Promise<void> {
+  return request<void>(`/api/kirayee/leases/${encodeURIComponent(leaseId)}/${action}`, { method: 'POST' });
 }
 
 export function searchTenants(query: string): Promise<TenantLookupResult[]> {
@@ -32,6 +59,10 @@ export function sendRentalRequest(input: RentalRequestInput): Promise<RentalRequ
   form.set('endDate', input.endDate);
   if (input.agreementDocument) form.set('agreementDocument', input.agreementDocument);
   return request<RentalRequestRecord>('/api/rental-requests', { method: 'POST', body: form });
+}
+
+export function withdrawRentalRequest(leaseId: string): Promise<void> {
+  return request<void>(`/api/kirayee/leases/${encodeURIComponent(leaseId)}/withdraw`, { method: 'POST' });
 }
 
 export async function downloadRentalAgreement(leaseId: string): Promise<void> {

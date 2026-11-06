@@ -265,6 +265,7 @@ public sealed class Lease
         AgreementDocumentUrl = agreementDocumentUrl;
     }
     public void Reject() => Status = "Rejected";
+    public void Withdraw() => Status = "Withdrawn";
     public void RequestCancellation() => Status = "CancellationRequested";
     public void Terminate() => Status = "Terminated";
 }

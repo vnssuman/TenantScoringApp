@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import { ArrowLeft, FileText, MapPin, Paperclip, Plane, UserRound, Wallet } from 'lucide-react';
 import { getProperties } from '../../services/propertyApi';
-import { downloadRentalAgreement, getRentalRequests, searchTenants, sendRentalRequest } from '../../services/rentalRequestApi';
+import { downloadRentalAgreement, getRentalRequests, searchTenants, sendRentalRequest, withdrawRentalRequest } from '../../services/rentalRequestApi';
 import { getCurrentProfile } from '../../services/profileApi';
+import { ActionModal } from '../../components/ActionModal';
 import type { PropertyRecord } from '../../types/property';
 import type { RentalRequestRecord, TenantLookupResult } from '../../types/rentalRequest';
 
@@ -114,6 +115,11 @@ export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement 
     }
   }
 
+  async function withdrawRequest(leaseId: string): Promise<void> {
+    await withdrawRentalRequest(leaseId);
+    await refreshRequests();
+  }
+
   const vacantProperties = properties.filter((property) => property.is_vacant);
 
   return (
@@ -153,7 +159,7 @@ export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement 
             <section className="mapping-empty-requests"><FileText size={30} /><h2>No Sent Requests</h2><p>Rental requests you send will appear here.</p><button className="mapping-send-button" type="button" onClick={openRequestFlow}><Plane size={15} /> Send Request</button></section>
           ) : (
             <section className="mapping-list" aria-label="Sent rental requests">
-              {sentRequests.map((request) => <RequestCard key={request.leaseId} request={request} onDownload={() => downloadRentalAgreement(request.leaseId)} />)}
+                {sentRequests.map((request) => <RequestCard key={request.leaseId} request={request} onDownload={() => downloadRentalAgreement(request.leaseId)} onWithdraw={() => withdrawRequest(request.leaseId)} />)}
             </section>
           )}
         </>
@@ -166,9 +172,36 @@ function EmptyRenters({ onSend }: { onSend: () => void }): ReactElement {
   return <section className="mapping-empty-state"><span className="mapping-empty-icon"><UserRound size={24} /></span><h2>No Active Renters</h2><p>Send rental requests to renters to get started</p><button className="mapping-send-button" type="button" onClick={onSend}><Plane size={15} /> Send Request</button></section>;
 }
 
-function RequestCard({ request, onDownload }: { request: RentalRequestRecord; onDownload: () => Promise<void> }): ReactElement {
+function RequestCard({ request, onDownload, onWithdraw }: { request: RentalRequestRecord; onDownload: () => Promise<void>; onWithdraw?: () => Promise<void> }): ReactElement {
   const [downloadError, setDownloadError] = useState('');
-  return <article className="rental-request-card"><header className="rental-request-heading"><div><h2>{request.propertyName}</h2><p><MapPin size={14} />{request.location}</p></div><span className={`rental-request-status ${request.status.toLowerCase()}`}>{request.status}</span></header><div className="rental-request-metadata"><div><span>Profile ID</span><strong className="mapping-profile-id">{formatProfileId(request.profileId)}</strong></div><div><span>Monthly Rent</span><strong>{formatCurrency(request.agreedRent)}</strong></div><div><span>Start Date</span><strong>{formatDate(request.startDate)}</strong></div><div><span>End Date</span><strong>{formatDate(request.endDate)}</strong></div></div>{request.hasAgreementDocument && <footer className="rental-request-footer"><button type="button" onClick={() => { setDownloadError(''); void onDownload().catch((reason: unknown) => setDownloadError(reason instanceof Error ? reason.message : 'Document download failed.')); }}><FileText size={16} />Mock Agreement Document - Standard Rental Agreement.pdf</button>{downloadError && <small role="alert">{downloadError}</small>}</footer>}</article>;
+  const [withdrawError, setWithdrawError] = useState('');
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  async function handleWithdraw(): Promise<void> {
+    if (!onWithdraw) return;
+    setWithdrawing(true);
+    setWithdrawError('');
+    try {
+      await onWithdraw();
+      setIsWithdrawModalOpen(false);
+    } catch (reason) {
+      setWithdrawError(reason instanceof Error ? reason.message : 'Request could not be withdrawn.');
+    } finally {
+      setWithdrawing(false);
+    }
+  }
+  return <article className="rental-request-card"><header className="rental-request-heading"><div><h2>{request.propertyName}</h2><p><MapPin size={14} />{request.location}</p></div><span className={`rental-request-status ${request.status.toLowerCase()}`}>{request.status}</span></header><div className="rental-request-metadata"><div><span>Profile ID</span><strong className="mapping-profile-id">{formatProfileId(request.profileId)}</strong></div><div><span>Monthly Rent</span><strong>{formatCurrency(request.agreedRent)}</strong></div><div><span>Start Date</span><strong>{formatDate(request.startDate)}</strong></div><div><span>End Date</span><strong>{formatDate(request.endDate)}</strong></div></div>{(request.hasAgreementDocument || onWithdraw) && <footer className="rental-request-footer">{request.hasAgreementDocument && <button type="button" onClick={() => { setDownloadError(''); void onDownload().catch((reason: unknown) => setDownloadError(reason instanceof Error ? reason.message : 'Document download failed.')); }}><FileText size={16} />Mock Agreement Document - Standard Rental Agreement.pdf</button>}{downloadError && <small role="alert">{downloadError}</small>}{onWithdraw && <button className="mapping-withdraw-button" type="button" disabled={withdrawing} onClick={() => { setWithdrawError(''); setIsWithdrawModalOpen(true); }}>Withdraw request</button>}{withdrawError && <small role="alert">{withdrawError}</small>}</footer>}
+    <ActionModal
+      isOpen={isWithdrawModalOpen}
+      title="Withdraw rental request?"
+      message={<>{'This request will be withdrawn and removed from your sent requests.'}{withdrawError && <p className="action-modal-error" role="alert">{withdrawError}</p>}</>}
+      onClose={() => { if (!withdrawing) setIsWithdrawModalOpen(false); }}
+      actions={[
+        { label: 'Keep request', onClick: () => setIsWithdrawModalOpen(false), variant: 'secondary', disabled: withdrawing },
+        { label: withdrawing ? 'Withdrawing...' : 'Withdraw request', onClick: handleWithdraw, variant: 'danger', disabled: withdrawing },
+      ]}
+    />
+  </article>;
 }
 
 function formatProfileId(profileId: string): string { return `TNT${profileId.replaceAll('-', '').slice(0, 8).toUpperCase()}`; }

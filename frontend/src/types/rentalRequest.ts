@@ -19,6 +19,23 @@ export interface RentalRequestRecord {
   hasAgreementDocument: boolean;
 }
 
+export interface TenantRentalRequestRecord {
+  leaseId: string;
+  ownerName: string;
+  propertyName: string;
+  propertyType: string;
+  address: string;
+  city: string;
+  state: string;
+  agreedRent: number;
+  agreedAdvance: number;
+  startDate: string | null;
+  endDate: string | null;
+  createdAt: string;
+  status: string;
+  hasAgreementDocument: boolean;
+}
+
 export interface RentalRequestInput {
   propertyId: string;
   tenantId: string;
