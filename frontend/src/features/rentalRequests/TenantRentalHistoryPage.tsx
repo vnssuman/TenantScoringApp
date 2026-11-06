@@ -23,7 +23,7 @@ export function TenantRentalHistoryPage({ onBack }: { onBack: () => void }): Rea
 
   return (
     <main className="mobile-content tenant-history-page">
-      <button className="properties-back" type="button" onClick={onBack}><ArrowLeft size={16} /> Explorer</button>
+      <button className="properties-back" type="button" onClick={onBack}><ArrowLeft size={16} /> Services</button>
       <header className="properties-header">
         <div>
           <p className="mobile-kicker">Tenant workspace</p>

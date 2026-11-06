@@ -291,6 +291,14 @@ app.MapGet("/api/kirayee/leases", async (HttpRequest request, IKirayeeService se
     return userId is null ? Results.Unauthorized() : Results.Ok(await service.GetLeasesAsync(userId.Value, cancellationToken));
 });
 
+app.MapGet("/api/tenant/payment-records", async (HttpRequest request, IKirayeeService service, CancellationToken cancellationToken) =>
+{
+    var tenantId = GetUserId(request);
+    if (tenantId is null) return Results.Unauthorized();
+    var records = await service.GetTenantPaymentRecordsAsync(tenantId.Value, cancellationToken);
+    return records is null ? Results.Forbid() : Results.Ok(records);
+});
+
 app.MapPost("/api/kirayee/leases/{leaseId:guid}/{action}", async (HttpRequest request, Guid leaseId, string action, IKirayeeService service, CancellationToken cancellationToken) =>
 {
     var userId = GetUserId(request);

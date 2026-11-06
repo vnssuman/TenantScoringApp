@@ -28,6 +28,8 @@ public interface IKirayeeRepository
     Task AddLeaseAsync(Lease lease, CancellationToken cancellationToken);
     Task<Lease?> FindLeaseAsync(Guid leaseId, CancellationToken cancellationToken);
     Task<IReadOnlyList<Lease>> GetLeasesAsync(Guid userId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<Lease>> GetTenantPaymentLeasesAsync(Guid tenantId, CancellationToken cancellationToken);
+    Task AddPaymentsAsync(IEnumerable<RentPayment> payments, CancellationToken cancellationToken);
     Task AddPaymentAsync(RentPayment payment, CancellationToken cancellationToken);
     Task<RentPayment?> FindPaymentAsync(Guid paymentId, CancellationToken cancellationToken);
     Task SaveChangesAsync(CancellationToken cancellationToken);
@@ -58,6 +60,7 @@ public interface IKirayeeService
     Task<(string? DocumentPath, bool IsAuthorized)> GetRentalRequestDocumentAsync(Guid userId, Guid leaseId, CancellationToken cancellationToken = default);
     Task<LeaseResponse?> CreateLeaseAsync(Guid tenantId, LeaseRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<LeaseResponse>> GetLeasesAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TenantPaymentPropertyRecord>?> GetTenantPaymentRecordsAsync(Guid tenantId, CancellationToken cancellationToken = default);
     Task<LeaseResponse?> ChangeLeaseStatusAsync(Guid userId, Guid leaseId, string action, CancellationToken cancellationToken = default);
     Task<PaymentResponse?> PayAsync(Guid userId, Guid paymentId, PaymentRequest request, CancellationToken cancellationToken = default);
 }
@@ -315,13 +318,50 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
     public async Task<IReadOnlyList<LeaseResponse>> GetLeasesAsync(Guid userId, CancellationToken cancellationToken = default) =>
         (await repository.GetLeasesAsync(userId, cancellationToken)).Select(ToLease).ToArray();
 
+    public async Task<IReadOnlyList<TenantPaymentPropertyRecord>?> GetTenantPaymentRecordsAsync(Guid tenantId, CancellationToken cancellationToken = default)
+    {
+        var tenant = await repository.FindUserAsync(tenantId, cancellationToken);
+        if (tenant is null || tenant.CurrentRole is not ("Tenant" or "Both")) return null;
+        var leases = await repository.GetTenantPaymentLeasesAsync(tenantId, cancellationToken);
+        var missingPayments = leases.SelectMany(CreateMissingMonthlyPayments).ToArray();
+        if (missingPayments.Length > 0)
+        {
+            await repository.AddPaymentsAsync(missingPayments, cancellationToken);
+            await repository.SaveChangesAsync(cancellationToken);
+            leases = await repository.GetTenantPaymentLeasesAsync(tenantId, cancellationToken);
+        }
+        var firstDayOfNextMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1).AddMonths(1);
+        return leases.Select(lease => new TenantPaymentPropertyRecord(
+            lease.LeaseId,
+            lease.PropertyId,
+            lease.Property.PropertyName,
+            lease.Property.PropertyType,
+            lease.Property.Location,
+            lease.StartDate,
+            lease.EndDate,
+            lease.Status,
+            lease.Payments.Where(payment => payment.DueDate < firstDayOfNextMonth)
+                .OrderByDescending(payment => payment.DueDate)
+                .Select(payment => new TenantRentPaymentRecord(
+                payment.PaymentId,
+                payment.DueDate,
+                payment.PaidDate,
+                payment.Amount,
+                payment.Status,
+                payment.RewardPointsEarned)).ToArray())).ToArray();
+    }
+
     public async Task<LeaseResponse?> ChangeLeaseStatusAsync(Guid userId, Guid leaseId, string action, CancellationToken cancellationToken = default)
     {
         var lease = await repository.FindLeaseAsync(leaseId, cancellationToken);
         if (lease is null || lease.OwnerId != userId && lease.TenantId != userId) return null;
         switch (action.Trim().ToLowerInvariant())
         {
-            case "accept" when lease.TenantId == userId: lease.Accept(); lease.Property.SetStatus("Leased"); break;
+            case "accept" when lease.TenantId == userId:
+                lease.Accept();
+                lease.Property.SetStatus("Leased");
+                await repository.AddPaymentsAsync(CreateMissingMonthlyPayments(lease), cancellationToken);
+                break;
             case "reject" when lease.TenantId == userId: lease.Reject(); break;
             case "withdraw" when lease.OwnerId == userId && lease.Status == "Pending": lease.Withdraw(); break;
             case "cancel" when lease.Status is "Pending" or "Active": lease.RequestCancellation(); break;
@@ -335,12 +375,34 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
     public async Task<PaymentResponse?> PayAsync(Guid userId, Guid paymentId, PaymentRequest request, CancellationToken cancellationToken = default)
     {
         var payment = await repository.FindPaymentAsync(paymentId, cancellationToken);
-        if (payment is null || request.Amount != payment.Amount || string.IsNullOrWhiteSpace(request.TransactionReference)) return null;
+        if (payment is null || payment.Lease.TenantId != userId || payment.Status != "Pending" || request.Amount != payment.Amount || string.IsNullOrWhiteSpace(request.TransactionReference)) return null;
         payment.MarkPaid(request.TransactionReference.Trim(), DateTime.UtcNow);
         var profile = await repository.FindProfileAsync(userId, cancellationToken);
         if (profile is not null) profile.AddRewardPoints(payment.RewardPointsEarned);
         await repository.SaveChangesAsync(cancellationToken);
         return new PaymentResponse(payment.PaymentId, payment.Amount, payment.DueDate, payment.PaidDate, payment.Status, payment.RewardPointsEarned);
+    }
+
+    private static IReadOnlyList<RentPayment> CreateMissingMonthlyPayments(Lease lease)
+    {
+        if (lease.StartDate is not { } startDate || lease.EndDate is not { } endDate || endDate.Date < startDate.Date) return [];
+        var payments = new List<RentPayment>();
+        var existingDueDates = lease.Payments.Select(payment => payment.DueDate.Date).ToHashSet();
+        for (var month = 0; ; month++)
+        {
+            DateTime dueDate;
+            try
+            {
+                dueDate = startDate.Date.AddMonths(month);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                break;
+            }
+            if (dueDate > endDate.Date) break;
+            if (!existingDueDates.Contains(dueDate)) payments.Add(new RentPayment(lease.LeaseId, lease.AgreedRent, dueDate));
+        }
+        return payments;
     }
 
     private async Task<ProfileResponse?> BuildProfileAsync(Guid userId, CancellationToken cancellationToken)

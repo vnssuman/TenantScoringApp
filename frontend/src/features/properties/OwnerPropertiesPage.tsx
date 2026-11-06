@@ -93,7 +93,7 @@ export function OwnerPropertiesPage({ onBack }: { onBack: () => void }): ReactEl
 
   return (
     <main className="mobile-content properties-page">
-      <button className="properties-back" type="button" onClick={isFormOpen ? closeForm : onBack}><ArrowLeft size={17} /> {isFormOpen ? 'Your Properties' : 'Explorer'}</button>
+      <button className="properties-back" type="button" onClick={isFormOpen ? closeForm : onBack}><ArrowLeft size={17} /> {isFormOpen ? 'Your Properties' : 'Services'}</button>
       {isFormOpen ? (
         <section className="property-form-view" aria-labelledby="property-form-title">
           <p className="mobile-kicker">Owner workspace</p>

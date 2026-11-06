@@ -45,3 +45,5 @@ public sealed record RentalRequestResponse(Guid LeaseId, Guid PropertyId, string
 public sealed record TenantRentalRequestResponse(Guid LeaseId, string OwnerName, string PropertyName, string PropertyType, string Address, string City, string State, decimal AgreedRent, decimal AgreedAdvance, DateTime? StartDate, DateTime? EndDate, DateTime CreatedAt, string Status, bool HasAgreementDocument);
 public sealed record PaymentRequest(decimal Amount, string TransactionReference);
 public sealed record PaymentResponse(Guid PaymentId, decimal Amount, DateTime DueDate, DateTime? PaidDate, string Status, int RewardPointsEarned);
+public sealed record TenantRentPaymentRecord(Guid PaymentId, DateTime DueDate, DateTime? PaidDate, decimal Amount, string Status, int RewardPointsEarned);
+public sealed record TenantPaymentPropertyRecord(Guid LeaseId, Guid PropertyId, string PropertyName, string PropertyType, string Location, DateTime? StartDate, DateTime? EndDate, string LeaseStatus, IReadOnlyList<TenantRentPaymentRecord> Payments);

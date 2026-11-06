@@ -124,7 +124,7 @@ export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement 
 
   return (
     <main className="mobile-content map-tenant-page">
-      <button className="properties-back" type="button" onClick={onBack}><MapPin size={16} /> Explorer</button>
+      <button className="properties-back" type="button" onClick={onBack}><MapPin size={16} /> Services</button>
       <header className="mapping-header">
         <div>
           <p className="mobile-kicker">Owner workspace</p>

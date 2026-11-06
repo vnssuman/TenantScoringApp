@@ -36,6 +36,27 @@ export interface TenantRentalRequestRecord {
   hasAgreementDocument: boolean;
 }
 
+export interface TenantRentPaymentRecord {
+  paymentId: string;
+  dueDate: string;
+  paidDate: string | null;
+  amount: number;
+  status: string;
+  rewardPointsEarned: number;
+}
+
+export interface TenantPaymentPropertyRecord {
+  leaseId: string;
+  propertyId: string;
+  propertyName: string;
+  propertyType: string;
+  location: string;
+  startDate: string | null;
+  endDate: string | null;
+  leaseStatus: string;
+  payments: TenantRentPaymentRecord[];
+}
+
 export interface RentalRequestInput {
   propertyId: string;
   tenantId: string;

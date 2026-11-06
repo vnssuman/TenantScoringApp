@@ -1,4 +1,4 @@
-import type { RentalRequestInput, RentalRequestRecord, TenantLookupResult, TenantRentalRequestRecord } from '../types/rentalRequest';
+import type { RentalRequestInput, RentalRequestRecord, TenantLookupResult, TenantPaymentPropertyRecord, TenantRentalRequestRecord } from '../types/rentalRequest';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
@@ -44,6 +44,18 @@ export function getTenantRentalHistory(): Promise<TenantRentalRequestRecord[]> {
 
 export function respondToRentalRequest(leaseId: string, action: 'accept' | 'reject'): Promise<void> {
   return request<void>(`/api/kirayee/leases/${encodeURIComponent(leaseId)}/${action}`, { method: 'POST' });
+}
+
+export function getTenantPaymentRecords(): Promise<TenantPaymentPropertyRecord[]> {
+  return request<TenantPaymentPropertyRecord[]>('/api/tenant/payment-records');
+}
+
+export function payTenantRent(paymentId: string, amount: number, transactionReference: string): Promise<void> {
+  return request<void>(`/api/kirayee/payments/${encodeURIComponent(paymentId)}/pay`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amount, transactionReference }),
+  });
 }
 
 export function searchTenants(query: string): Promise<TenantLookupResult[]> {

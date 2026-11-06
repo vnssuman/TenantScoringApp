@@ -67,7 +67,7 @@ export default function App(): ReactElement {
 		: route === 'update-profile' && localStorage.getItem('kirayeeToken')
 			? <ProfileCompletionPage onComplete={handleProfileUpdated} onBack={() => { window.location.hash = 'home'; }} />
 		: dashboardRoutes.includes(route) && localStorage.getItem('kirayeeToken')
-					? <ScoreDashboardPage onLogout={handleLogout} showProperties={route === '/owner/add-property'} showMapTenant={route === '/owner/map-tenant'} showTenantRequests={route === '/tenant/rental-requests'} showTenantHistory={route === '/tenant/rental-history'} />
+					? <ScoreDashboardPage onLogout={handleLogout} showProperties={route === '/owner/add-property'} showMapTenant={route === '/owner/map-tenant'} showTenantRequests={route === '/tenant/rental-requests'} showTenantHistory={route === '/tenant/rental-history'} showTenantPayments={route === '/tenant/payments'} />
 		: route === 'register'
 			? <>
 				<div className="brand-logo" aria-label="Kirayee">Kirayee</div>
@@ -78,7 +78,7 @@ export default function App(): ReactElement {
 
 	return (
 		<main className="app-shell">
-			<section className={dashboardRoutes.includes(route) ? 'dashboard-card' : 'registration-card'} aria-label={dashboardRoutes.includes(route) ? 'Kirayee dashboard' : route === 'update-profile' ? 'Complete profile' : route === 'login' ? 'Kirayee login' : 'Kirayee registration'}>
+			<section className={dashboardRoutes.includes(route) ? `dashboard-card${route === '/tenant/payments' ? ' payment-dashboard-card' : ''}` : 'registration-card'} aria-label={dashboardRoutes.includes(route) ? 'Kirayee dashboard' : route === 'update-profile' ? 'Complete profile' : route === 'login' ? 'Kirayee login' : 'Kirayee registration'}>
 				{content}
 			</section>
 		</main>
