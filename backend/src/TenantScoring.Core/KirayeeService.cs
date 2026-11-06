@@ -424,7 +424,7 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
     {
         var user = await repository.FindUserAsync(userId, cancellationToken);
         var profile = await repository.FindProfileAsync(userId, cancellationToken);
-        return user is null || profile is null ? null : new ProfileResponse(user.UserId, profile.ProfileId, profile.FirstName, profile.LastName, user.MobileNumber, user.Email, profile.PanNumber, profile.AadhaarNumber, user.MobileVerified, user.EmailVerified, profile.PanVerified, profile.AadhaarVerified, profile.BehavioralAssessmentCompleted, profile.BehavioralScore, profile.ProfileCompletionScore, profile.RewardPoints, user.CurrentRole, BuildProfileStatus(user, profile));
+        return user is null || profile is null ? null : new ProfileResponse(user.UserId, profile.ProfileId, user.CreatedAt, profile.FirstName, profile.LastName, user.MobileNumber, user.Email, profile.PanNumber, profile.AadhaarNumber, user.MobileVerified, user.EmailVerified, profile.PanVerified, profile.AadhaarVerified, profile.BehavioralAssessmentCompleted, profile.BehavioralScore, profile.ProfileCompletionScore, profile.RewardPoints, user.CurrentRole, BuildProfileStatus(user, profile));
     }
 
     private static ProfileStatusDto BuildProfileStatus(User user, UserProfile profile)

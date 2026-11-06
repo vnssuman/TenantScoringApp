@@ -132,11 +132,14 @@ button { cursor: pointer; }
 .identity-card-brand { display: inline-flex; align-items: center; gap: 7px; color: #17352f; font: 700 12px 'Space Grotesk', sans-serif; }
 .identity-card-brand .dashboard-brand-mark { width: 26px; height: 26px; border-radius: 8px; color: #fff; background: #226d5b; font-size: 13px; }
 .identity-role { padding: 5px 9px; border: 1px solid #b7d0bd; border-radius: 99px; color: #315d4d; font-size: 8px; font-weight: 700; }
-.identity-card-id { display: grid; gap: 3px; margin: 13px 0 14px; }
-.identity-card-ids { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.identity-card-ids .identity-card-id { min-width: 0; }
+.identity-card-id { display: grid; min-width: 0; gap: 2px; margin: 0; }
+.identity-details { display: grid; min-width: 0; flex: 1; align-content: center; gap: 12px; }
+.identity-member-name { display: grid; min-width: 0; gap: 4px; }
+.identity-member-name > span { color: #628071; font-size: 8px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.identity-member-name > strong { display: block; overflow: hidden; color: #17352f; font: 700 21px/1.1 'Space Grotesk', sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+.identity-meta-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .identity-card-id span, .identity-name-block > span { color: #628071; font-size: 8px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
-.identity-card-id strong { overflow-wrap: anywhere; color: #426756; font: 500 9px/1.35 'DM Sans', sans-serif; letter-spacing: .04em; }
+.identity-card-id strong { overflow-wrap: anywhere; color: #315744; font: 700 9px/1.35 'DM Sans', sans-serif; letter-spacing: .02em; }
 .identity-card-bottom { display: flex; min-width: 0; align-items: center; gap: 12px; }
 .identity-photo-wrap { position: relative; flex: 0 0 auto; padding: 4px; border: 1px solid rgba(255,255,255,.18); border-radius: 16px; background: rgba(255,255,255,.08); }
 .identity-photo { display: grid; width: 72px; height: 84px; place-items: center; border-radius: 12px; object-fit: cover; color: #164a3e; background: #d8eee0; font: 700 30px 'Space Grotesk', sans-serif; }
@@ -147,6 +150,7 @@ button { cursor: pointer; }
 .identity-photo-update.uploading { cursor: wait; opacity: .7; }
 .identity-name-block { display: grid; min-width: 0; gap: 6px; }
 .identity-name-block strong { display: block; overflow: hidden; color: #17352f; font: 600 19px/1.15 'Space Grotesk', sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+.member-since { display: block; margin-top: 2px; color: #628071; font-size: 9px; line-height: 1.3; }
 .profile-image-error { margin: -12px 0 18px; color: #a63d34; font-size: 11px; }
 .mobile-kicker { margin: 0 0 5px; color: #789087; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 .welcome-row h1, .tab-title { margin: 0; color: #17352f; font: 600 30px/1.1 'Space Grotesk', sans-serif; letter-spacing: 0; }
