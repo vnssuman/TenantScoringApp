@@ -69,16 +69,20 @@ export function ProfileCompletionPage({ onComplete, onBack }: ProfileCompletionP
     finally { setSaving(false); }
   }
 
-  if (error && !profile) return <section className="profile-completion-page"><button className="back-button" type="button" onClick={onBack}><ChevronLeft size={16} /> Back</button><div className="server-error" role="alert">{error}</div></section>;
-  if (!profile) return <section className="profile-completion-page"><p className="login-copy">Loading your profile...</p></section>;
+  if (error && !profile) return <main className="mobile-content profile-completion-page"><button className="properties-back" type="button" onClick={onBack}><ChevronLeft size={16} /> Services</button><div className="properties-error" role="alert">{error}</div></main>;
+  if (!profile) return <main className="mobile-content profile-completion-page"><button className="properties-back" type="button" onClick={onBack}><ChevronLeft size={16} /> Services</button><p className="mapping-loading">Loading your profile...</p></main>;
 
   const status: ProfileStatus = profile.profileStatus;
   return (
-    <section className="profile-completion-page" aria-label="Complete profile">
-      <button className="back-button profile-back" type="button" onClick={onBack}><ChevronLeft size={16} /> Back to home</button>
-      <p className="login-eyebrow">Profile setup</p>
-      <h1>Complete your profile</h1>
-      <p className="login-copy">Enter and save your mobile number, email, PAN, Aadhaar, and role.</p>
+    <main className="mobile-content profile-completion-page" aria-label="Complete profile">
+      <button className="properties-back" type="button" onClick={onBack}><ChevronLeft size={16} /> Services</button>
+      <header className="properties-header profile-completion-header">
+        <div>
+          <p className="mobile-kicker">Profile setup</p>
+          <h1>Complete your profile</h1>
+        </div>
+      </header>
+      <p className="profile-completion-intro">Update your contact details and identity information.</p>
       <div className="completion-summary"><strong>{status.completionPercentage}%</strong><span>complete</span><div className="completion-meter"><span style={{ width: `${status.completionPercentage}%` }} /></div></div>
       <form className="profile-form" onSubmit={save}>
         <ProfileField label="First name" value={form.firstName} onChange={(value) => setForm({ ...form, firstName: value })} />
@@ -94,7 +98,7 @@ export function ProfileCompletionPage({ onComplete, onBack }: ProfileCompletionP
       <div className="verification-list"><VerificationRow label="Mobile number" verified={status.isMobileVerified} /><VerificationRow label="Email address" verified={status.isEmailVerified} /><VerificationRow label="PAN" verified={status.isPanVerified} /><VerificationRow label="Aadhaar" verified={status.isAadhaarVerified} /></div>
       <form className="verification-form" onSubmit={verify}><label htmlFor="verificationChannel">Verify pending item</label><select id="verificationChannel" value={channel} onChange={(event) => setChannel(event.target.value as VerificationRequest['channel'])}><option value="email">Email</option><option value="mobile">Mobile</option><option value="pan">PAN</option><option value="aadhaar">Aadhaar</option></select><input value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" placeholder="Enter OTP" maxLength={6} required /><button className="secondary-button" type="submit" disabled={saving}>Verify with OTP</button></form>
       {message && <div className="success-message" role="status">{message}</div>}{error && <div className="server-error" role="alert">{error}</div>}
-    </section>
+    </main>
   );
 }
 

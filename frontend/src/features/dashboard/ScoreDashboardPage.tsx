@@ -9,13 +9,14 @@ import { OwnerPropertiesPage } from '../properties/OwnerPropertiesPage';
 import { TenantRentalRequestsPage } from '../rentalRequests/TenantRentalRequestsPage';
 import { TenantRentalHistoryPage } from '../rentalRequests/TenantRentalHistoryPage';
 import { TenantPaymentRecordPage } from '../rentalRequests/TenantPaymentRecordPage';
+import { ProfileCompletionPage } from '../profile/ProfileCompletionPage';
 import { ExplorerActionsGrid } from './ExplorerActionsGrid';
 
-interface ScoreDashboardPageProps { onLogout: () => void; showProperties?: boolean; showMapTenant?: boolean; showTenantRequests?: boolean; showTenantHistory?: boolean; showTenantPayments?: boolean; }
+interface ScoreDashboardPageProps { onLogout: () => void; showProfileCompletion?: boolean; onProfileUpdated?: (profile: UserProfile) => void; showProperties?: boolean; showMapTenant?: boolean; showTenantRequests?: boolean; showTenantHistory?: boolean; showTenantPayments?: boolean; }
 type Tab = 'home' | 'explore' | 'activity' | 'profile';
 type Role = 'tenant' | 'owner';
 
-export function ScoreDashboardPage({ onLogout, showProperties = false, showMapTenant = false, showTenantRequests = false, showTenantHistory = false, showTenantPayments = false }: ScoreDashboardPageProps): ReactElement {
+export function ScoreDashboardPage({ onLogout, showProfileCompletion = false, onProfileUpdated, showProperties = false, showMapTenant = false, showTenantRequests = false, showTenantHistory = false, showTenantPayments = false }: ScoreDashboardPageProps): ReactElement {
   const [summary, setSummary] = useState<DashboardUserSummary | null>(null);
   const [error, setError] = useState('');
   const [tab, setTab] = useState<Tab>('home');
@@ -63,7 +64,7 @@ export function ScoreDashboardPage({ onLogout, showProperties = false, showMapTe
 
   function navigateToTab(nextTab: Tab): void {
     setTab(nextTab);
-    if (showProperties || showMapTenant || showTenantRequests || showTenantHistory || showTenantPayments) window.location.hash = 'home';
+    if (showProperties || showMapTenant || showTenantRequests || showTenantHistory || showTenantPayments || showProfileCompletion) window.location.hash = 'home';
   }
 
   if (error) return <section className="dashboard-state" role="alert"><ShieldCheck size={34} aria-hidden="true" /><h1>Session unavailable</h1><p>{error}</p><button className="dashboard-primary-button" type="button" onClick={onLogout}>Back to Login</button></section>;
@@ -71,7 +72,9 @@ export function ScoreDashboardPage({ onLogout, showProperties = false, showMapTe
 
   return <section className="mobile-dashboard" aria-label="Kirayee dashboard">
     <header className="mobile-header"><div className="dashboard-brand"><span className="dashboard-brand-mark">K</span><span>Kirayee</span></div><div className="header-actions">{profile && !profile.profileStatus.isProfileComplete && <button className="completion-chip" type="button" onClick={() => { window.location.hash = 'update-profile'; }}>Profile {profile.profileStatus.completionPercentage}%</button>}<button className="icon-button" type="button" aria-label="Notifications"><Bell size={19} /></button><button className="icon-button" type="button" aria-label="Log out" onClick={onLogout}><LogOut size={18} /></button></div></header>
-      {showTenantPayments
+      {showProfileCompletion
+        ? <ProfileCompletionPage onComplete={onProfileUpdated ?? (() => { window.location.hash = 'home'; })} onBack={() => { setTab('home'); window.location.hash = 'home'; }} />
+        : showTenantPayments
         ? <TenantPaymentRecordPage onBack={() => { setTab('explore'); window.location.hash = 'home'; }} />
         : showTenantHistory
         ? <TenantRentalHistoryPage onBack={() => { setTab('explore'); window.location.hash = 'home'; }} />
@@ -82,12 +85,12 @@ export function ScoreDashboardPage({ onLogout, showProperties = false, showMapTe
         : showProperties
         ? <OwnerPropertiesPage onBack={() => { setTab('explore'); window.location.hash = 'home'; }} />
         : tab === 'home' && <HomeTab summary={summary} role={role} showRoleSwitch={profile?.currentRole.toLowerCase() === 'both'} onRoleChange={setRole} profileId={profile?.profileId} profileImageUrl={profileImageUrl} isUploadingImage={isUploadingImage} profileImageError={profileImageError} onProfileImageChange={handleProfileImageChange} />}
-      {!showProperties && !showMapTenant && !showTenantRequests && !showTenantHistory && !showTenantPayments && tab === 'explore' && (profile
+      {!showProfileCompletion && !showProperties && !showMapTenant && !showTenantRequests && !showTenantHistory && !showTenantPayments && tab === 'explore' && (profile
         ? <ExplorerActionsGrid role={profile.currentRole.toLowerCase() === 'both' ? 'both' : role} />
         : <section className="dashboard-state" aria-live="polite"><RefreshCw className="spin" size={24} aria-hidden="true" /><p>Loading your profile...</p></section>)}
-    {!showProperties && !showMapTenant && !showTenantRequests && !showTenantHistory && !showTenantPayments && tab === 'activity' && <SimpleTab icon={<WalletCards size={26} />} title="Your activity" copy="Payments, proposals, and lease updates will appear here." action="View payment history" />}
-    {!showProperties && !showMapTenant && !showTenantRequests && !showTenantHistory && !showTenantPayments && tab === 'profile' && <ProfileTab summary={summary} profile={profile} />}
-    <nav className="bottom-nav" aria-label="Main navigation"><NavButton active={!showProperties && !showMapTenant && !showTenantRequests && !showTenantHistory && !showTenantPayments && tab === 'home'} icon={<Home size={20} />} label="Home" onClick={() => navigateToTab('home')} /><NavButton active={showProperties || showMapTenant || showTenantRequests || showTenantHistory || showTenantPayments || tab === 'explore'} icon={<Building2 size={20} />} label="Services" onClick={() => navigateToTab('explore')} /><NavButton active={!showProperties && !showMapTenant && !showTenantRequests && !showTenantHistory && !showTenantPayments && tab === 'activity'} icon={<CreditCard size={20} />} label="Activity" onClick={() => navigateToTab('activity')} /><NavButton active={!showProperties && !showMapTenant && !showTenantRequests && !showTenantHistory && !showTenantPayments && tab === 'profile'} icon={<CircleUserRound size={20} />} label="Profile" onClick={() => navigateToTab('profile')} /></nav>
+    {!showProfileCompletion && !showProperties && !showMapTenant && !showTenantRequests && !showTenantHistory && !showTenantPayments && tab === 'activity' && <SimpleTab icon={<WalletCards size={26} />} title="Your activity" copy="Payments, proposals, and lease updates will appear here." action="View payment history" />}
+    {!showProfileCompletion && !showProperties && !showMapTenant && !showTenantRequests && !showTenantHistory && !showTenantPayments && tab === 'profile' && <ProfileTab summary={summary} profile={profile} />}
+    <nav className="bottom-nav" aria-label="Main navigation"><NavButton active={!showProfileCompletion && !showProperties && !showMapTenant && !showTenantRequests && !showTenantHistory && !showTenantPayments && tab === 'home'} icon={<Home size={20} />} label="Home" onClick={() => navigateToTab('home')} /><NavButton active={showProperties || showMapTenant || showTenantRequests || showTenantHistory || showTenantPayments || (!showProfileCompletion && tab === 'explore')} icon={<Building2 size={20} />} label="Services" onClick={() => navigateToTab('explore')} /><NavButton active={!showProfileCompletion && !showProperties && !showMapTenant && !showTenantRequests && !showTenantHistory && !showTenantPayments && tab === 'activity'} icon={<CreditCard size={20} />} label="Activity" onClick={() => navigateToTab('activity')} /><NavButton active={!showProfileCompletion && !showProperties && !showMapTenant && !showTenantRequests && !showTenantHistory && !showTenantPayments && tab === 'profile'} icon={<CircleUserRound size={20} />} label="Profile" onClick={() => navigateToTab('profile')} /></nav>
   </section>;
 }
 

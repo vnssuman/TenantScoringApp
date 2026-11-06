@@ -8,7 +8,7 @@ import type { LoginResponse, ProfileStatus } from './types/auth';
 import type { UserProfile } from './types/profile';
 import './styles.css';
 
-const dashboardRoutes = ['home', '/owner/map-tenant', '/owner/tenant-scores', '/owner/add-property', '/owner/feedback', '/tenant/rental-requests', '/tenant/payments', '/tenant/rental-history'];
+const dashboardRoutes = ['home', 'update-profile', '/owner/map-tenant', '/owner/tenant-scores', '/owner/add-property', '/owner/feedback', '/tenant/rental-requests', '/tenant/payments', '/tenant/rental-history'];
 
 export default function App(): ReactElement {
 	const [route, setRoute] = useState(() => window.location.hash.replace('#', '') || 'login');
@@ -64,10 +64,8 @@ export default function App(): ReactElement {
 
 	const content = route === 'login'
 		? <LoginUserPage onRegister={() => { setRegistrationNotice(sessionStorage.getItem('kirayeeRegistrationNotice') ?? ''); window.location.hash = 'register'; }} onLoggedIn={handleLoggedIn} />
-		: route === 'update-profile' && localStorage.getItem('kirayeeToken')
-			? <ProfileCompletionPage onComplete={handleProfileUpdated} onBack={() => { window.location.hash = 'home'; }} />
 		: dashboardRoutes.includes(route) && localStorage.getItem('kirayeeToken')
-					? <ScoreDashboardPage onLogout={handleLogout} showProperties={route === '/owner/add-property'} showMapTenant={route === '/owner/map-tenant'} showTenantRequests={route === '/tenant/rental-requests'} showTenantHistory={route === '/tenant/rental-history'} showTenantPayments={route === '/tenant/payments'} />
+					? <ScoreDashboardPage onLogout={handleLogout} showProfileCompletion={route === 'update-profile'} onProfileUpdated={handleProfileUpdated} showProperties={route === '/owner/add-property'} showMapTenant={route === '/owner/map-tenant'} showTenantRequests={route === '/tenant/rental-requests'} showTenantHistory={route === '/tenant/rental-history'} showTenantPayments={route === '/tenant/payments'} />
 		: route === 'register'
 			? <>
 				<div className="brand-logo" aria-label="Kirayee">Kirayee</div>
