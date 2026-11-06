@@ -5,6 +5,7 @@ export type ProfileRole = 'Owner' | 'Tenant' | 'Both';
 export interface UserProfile {
   userId: string;
   profileId: string;
+  profileCode: string;
   createdAt: string;
   firstName?: string;
   lastName?: string;

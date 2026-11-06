@@ -39,8 +39,8 @@ public interface IKirayeeService
 {
     Task<KirayeeRegistrationResult> RegisterAsync(KirayeeRegisterRequest request, CancellationToken cancellationToken = default);
     Task<ProfileResponse?> GetProfileAsync(Guid userId, CancellationToken cancellationToken = default);
-    Task<string?> GetProfileImageFileNameAsync(Guid userId, CancellationToken cancellationToken = default);
-    Task<(bool Updated, string? PreviousFileName)> UpdateProfileImageAsync(Guid userId, string fileName, CancellationToken cancellationToken = default);
+    Task<(byte[] Data, string ContentType)?> GetProfileImageAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<bool> UpdateProfileImageAsync(Guid userId, byte[] imageData, string contentType, CancellationToken cancellationToken = default);
     Task<ProfileStatusDto?> GetProfileStatusAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<BehavioralAssessmentResponse?> GetBehavioralAssessmentAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<BehavioralAssessmentResponse?> SubmitBehavioralAssessmentAsync(Guid userId, BehavioralAssessmentRequest request, CancellationToken cancellationToken = default);
@@ -92,17 +92,21 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
     public async Task<ProfileResponse?> GetProfileAsync(Guid userId, CancellationToken cancellationToken = default) =>
         await BuildProfileAsync(userId, cancellationToken);
 
-    public async Task<string?> GetProfileImageFileNameAsync(Guid userId, CancellationToken cancellationToken = default) =>
-        (await repository.FindProfileAsync(userId, cancellationToken))?.ProfileImageFileName;
-
-    public async Task<(bool Updated, string? PreviousFileName)> UpdateProfileImageAsync(Guid userId, string fileName, CancellationToken cancellationToken = default)
+    public async Task<(byte[] Data, string ContentType)?> GetProfileImageAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var profile = await repository.FindProfileAsync(userId, cancellationToken);
-        if (profile is null) return (false, null);
-        var previousFileName = profile.ProfileImageFileName;
-        profile.SetProfileImage(fileName);
+        return profile?.ProfileImageData is { } data && profile.ProfileImageContentType is { } contentType
+            ? (data, contentType)
+            : null;
+    }
+
+    public async Task<bool> UpdateProfileImageAsync(Guid userId, byte[] imageData, string contentType, CancellationToken cancellationToken = default)
+    {
+        var profile = await repository.FindProfileAsync(userId, cancellationToken);
+        if (profile is null) return false;
+        profile.SetProfileImage(imageData, contentType);
         await repository.SaveChangesAsync(cancellationToken);
-        return (true, previousFileName);
+        return true;
     }
 
     public async Task<ProfileStatusDto?> GetProfileStatusAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -260,7 +264,7 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
         var owner = await repository.FindUserAsync(ownerId, cancellationToken);
         if (owner is null || owner.CurrentRole is not ("Owner" or "Both")) return null;
         var tenants = await repository.SearchTenantsAsync(query.Trim(), cancellationToken);
-        return tenants.Select(user => new TenantLookupResponse(user.UserId, user.Profile!.ProfileId, string.Join(" ", new[] { user.Profile.FirstName, user.Profile.LastName }.Where(name => !string.IsNullOrWhiteSpace(name))))).ToArray();
+        return tenants.Select(user => new TenantLookupResponse(user.UserId, user.Profile!.ProfileCode, string.Join(" ", new[] { user.Profile.FirstName, user.Profile.LastName }.Where(name => !string.IsNullOrWhiteSpace(name))))).ToArray();
     }
 
     public async Task<IReadOnlyList<RentalRequestResponse>?> GetOwnerRentalRequestsAsync(Guid ownerId, string? status, CancellationToken cancellationToken = default)
@@ -310,7 +314,7 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
         var lease = new Lease(property.PropertyId, tenantId, ownerId, rentAmount, property.AdvanceAmount);
         lease.SetRentalTerms(startDate, endDate, documentPath);
         await repository.AddLeaseAsync(lease, cancellationToken);
-        return new RentalRequestResponse(lease.LeaseId, property.PropertyId, property.PropertyName, property.Location, tenant.UserId, tenant.Profile!.ProfileId, string.Join(" ", new[] { tenant.Profile.FirstName, tenant.Profile.LastName }.Where(name => !string.IsNullOrWhiteSpace(name))), lease.AgreedRent, lease.StartDate, lease.EndDate, lease.Status, !string.IsNullOrWhiteSpace(lease.AgreementDocumentUrl));
+        return new RentalRequestResponse(lease.LeaseId, property.PropertyId, property.PropertyName, property.Location, tenant.UserId, tenant.Profile!.ProfileCode, string.Join(" ", new[] { tenant.Profile.FirstName, tenant.Profile.LastName }.Where(name => !string.IsNullOrWhiteSpace(name))), lease.AgreedRent, lease.StartDate, lease.EndDate, lease.Status, !string.IsNullOrWhiteSpace(lease.AgreementDocumentUrl));
     }
 
     public async Task<(string? DocumentPath, bool IsAuthorized)> GetRentalRequestDocumentAsync(Guid userId, Guid leaseId, CancellationToken cancellationToken = default)
@@ -424,7 +428,7 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
     {
         var user = await repository.FindUserAsync(userId, cancellationToken);
         var profile = await repository.FindProfileAsync(userId, cancellationToken);
-        return user is null || profile is null ? null : new ProfileResponse(user.UserId, profile.ProfileId, user.CreatedAt, profile.FirstName, profile.LastName, user.MobileNumber, user.Email, profile.PanNumber, profile.AadhaarNumber, user.MobileVerified, user.EmailVerified, profile.PanVerified, profile.AadhaarVerified, profile.BehavioralAssessmentCompleted, profile.BehavioralScore, profile.ProfileCompletionScore, profile.RewardPoints, user.CurrentRole, BuildProfileStatus(user, profile));
+        return user is null || profile is null ? null : new ProfileResponse(user.UserId, profile.ProfileId, profile.ProfileCode, user.CreatedAt, profile.FirstName, profile.LastName, user.MobileNumber, user.Email, profile.PanNumber, profile.AadhaarNumber, user.MobileVerified, user.EmailVerified, profile.PanVerified, profile.AadhaarVerified, profile.BehavioralAssessmentCompleted, profile.BehavioralScore, profile.ProfileCompletionScore, profile.RewardPoints, user.CurrentRole, BuildProfileStatus(user, profile));
     }
 
     private static ProfileStatusDto BuildProfileStatus(User user, UserProfile profile)
@@ -446,7 +450,7 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
     private static bool ValidScore(ScoreRequest request) => new[] { request.CreditScore, request.PaymentHistory, request.OwnerFeedback }.All(value => value is >= 0 and <= 100);
     private static PropertyResponse ToProperty(Property property) => new(property.PropertyId, property.PropertyName, property.Location, property.RentAmount, property.AdvanceAmount, property.Status, property.BankAccountId);
     private static PropertyManagementResponse ToPropertyManagement(Property property) => new(property.PropertyId, property.PropertyName, property.PropertyType, property.Address, property.City, property.State, property.RentAmount, property.IsVacant);
-    private static RentalRequestResponse ToRentalRequest(Lease lease) => new(lease.LeaseId, lease.PropertyId, lease.Property.PropertyName, lease.Property.Location, lease.TenantId, lease.Tenant.Profile!.ProfileId, string.Join(" ", new[] { lease.Tenant.Profile.FirstName, lease.Tenant.Profile.LastName }.Where(name => !string.IsNullOrWhiteSpace(name))), lease.AgreedRent, lease.StartDate, lease.EndDate, lease.Status, !string.IsNullOrWhiteSpace(lease.AgreementDocumentUrl));
+    private static RentalRequestResponse ToRentalRequest(Lease lease) => new(lease.LeaseId, lease.PropertyId, lease.Property.PropertyName, lease.Property.Location, lease.TenantId, lease.Tenant.Profile!.ProfileCode, string.Join(" ", new[] { lease.Tenant.Profile.FirstName, lease.Tenant.Profile.LastName }.Where(name => !string.IsNullOrWhiteSpace(name))), lease.AgreedRent, lease.StartDate, lease.EndDate, lease.Status, !string.IsNullOrWhiteSpace(lease.AgreementDocumentUrl));
     private static bool ValidPropertyRequest(PropertyManagementRequest request) =>
         !string.IsNullOrWhiteSpace(request.PropertyName) && request.PropertyName.Trim().Length <= 150
         && request.PropertyType is "Apartment" or "Villa" or "Independent House"

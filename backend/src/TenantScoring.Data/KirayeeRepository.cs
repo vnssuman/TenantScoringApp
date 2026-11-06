@@ -55,12 +55,13 @@ public sealed class KirayeeRepository(TenantDbContext dbContext) : IKirayeeRepos
         {
             return await users.Where(user => user.UserId == userId || user.Profile!.ProfileId == userId).Take(10).ToListAsync(cancellationToken);
         }
-        if (query.StartsWith("TNT", StringComparison.OrdinalIgnoreCase))
+        if (query.StartsWith("KID", StringComparison.OrdinalIgnoreCase))
         {
-            var profilePrefix = query[3..].Trim();
-            if (profilePrefix.Length is > 0 and <= 8 && profilePrefix.All(Uri.IsHexDigit))
+            var profilePrefix = query[3..].Trim().ToUpperInvariant();
+            if (profilePrefix.Length is > 0 and <= 10 && profilePrefix.All(character => character is >= '0' and <= '9'))
             {
-                return await users.Where(user => user.Profile != null && user.Profile.ProfileId.ToString().StartsWith(profilePrefix))
+                var storedCodePrefix = $"KID{profilePrefix}";
+                return await users.Where(user => user.Profile != null && user.Profile.ProfileCode.StartsWith(storedCodePrefix))
                     .Take(10).ToListAsync(cancellationToken);
             }
         }

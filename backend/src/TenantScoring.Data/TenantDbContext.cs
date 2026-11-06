@@ -19,6 +19,10 @@ public sealed class TenantDbContext(DbContextOptions<TenantDbContext> options) :
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasSequence<long>("ProfileCodeSequence", "dbo")
+            .StartsAt(1_000_000_000L)
+            .IncrementsBy(1);
+
         var entity = modelBuilder.Entity<TenantApplication>();
         entity.ToTable("TenantApplications");
         entity.HasKey(application => application.TenantId);
@@ -51,9 +55,16 @@ public sealed class TenantDbContext(DbContextOptions<TenantDbContext> options) :
         profile.ToTable("UserProfiles");
         profile.HasKey(item => item.ProfileId);
         profile.HasIndex(item => item.UserId).IsUnique();
+        profile.HasIndex(item => item.ProfileCode).IsUnique();
+        profile.Property(item => item.ProfileCode)
+            .HasMaxLength(13)
+            .HasDefaultValueSql("N'KID' + RIGHT('0000000000' + CONVERT(varchar(10), NEXT VALUE FOR dbo.ProfileCodeSequence), 10)")
+            .ValueGeneratedOnAdd()
+            .IsRequired();
         profile.Property(item => item.FirstName).HasMaxLength(100);
         profile.Property(item => item.LastName).HasMaxLength(100);
-        profile.Property(item => item.ProfileImageFileName).HasMaxLength(100);
+        profile.Property(item => item.ProfileImageData).HasColumnType("varbinary(max)");
+        profile.Property(item => item.ProfileImageContentType).HasMaxLength(50);
         profile.Property(item => item.PanNumber).HasMaxLength(10);
         profile.Property(item => item.AadhaarNumber).HasMaxLength(12);
         profile.Property(item => item.BehavioralScore).HasPrecision(5, 2);

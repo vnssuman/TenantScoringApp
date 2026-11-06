@@ -22,6 +22,9 @@ namespace TenantScoring.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.HasSequence<long>("ProfileCodeSequence", "dbo")
+                .StartsAt(1000000000L);
+
             modelBuilder.Entity("TenantScoring.Models.BehavioralQuestion", b =>
                 {
                     b.Property<Guid>("QuestionId")
@@ -510,9 +513,19 @@ namespace TenantScoring.Data.Migrations
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
 
-                    b.Property<string>("ProfileImageFileName")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<string>("ProfileCode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(13)
+                        .HasColumnType("nvarchar(13)")
+                        .HasDefaultValueSql("N'KID' + RIGHT('0000000000' + CONVERT(varchar(10), NEXT VALUE FOR dbo.ProfileCodeSequence), 10)");
+
+                    b.Property<string>("ProfileImageContentType")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<byte[]>("ProfileImageData")
+                        .HasColumnType("varbinary(max)");
 
                     b.Property<string>("FirstName")
                         .HasMaxLength(100)
@@ -544,6 +557,9 @@ namespace TenantScoring.Data.Migrations
                     b.HasKey("ProfileId");
 
                     b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.HasIndex("ProfileCode")
                         .IsUnique();
 
                     b.ToTable("UserProfiles", (string)null);

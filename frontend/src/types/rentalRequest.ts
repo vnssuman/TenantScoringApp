@@ -1,6 +1,6 @@
 export interface TenantLookupResult {
   tenantId: string;
-  profileId: string;
+  profileCode: string;
   fullName: string;
 }
 
@@ -10,7 +10,7 @@ export interface RentalRequestRecord {
   propertyName: string;
   location: string;
   tenantId: string;
-  profileId: string;
+  profileCode: string;
   tenantName: string;
   agreedRent: number;
   startDate: string | null;

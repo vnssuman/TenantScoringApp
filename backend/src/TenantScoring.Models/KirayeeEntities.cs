@@ -54,13 +54,15 @@ public sealed class UserProfile
     }
 
     public Guid ProfileId { get; private set; }
+    public string ProfileCode { get; private set; } = null!;
     public Guid UserId { get; private set; }
     public string? FirstName { get; private set; }
     public string? LastName { get; private set; }
     public string? PanNumber { get; private set; }
     public bool PanVerified { get; private set; }
     public string? AadhaarNumber { get; private set; }
-    public string? ProfileImageFileName { get; private set; }
+    public byte[]? ProfileImageData { get; private set; }
+    public string? ProfileImageContentType { get; private set; }
     public bool AadhaarVerified { get; private set; }
     public bool BehavioralAssessmentCompleted { get; private set; }
     public decimal BehavioralScore { get; private set; }
@@ -78,9 +80,10 @@ public sealed class UserProfile
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void SetProfileImage(string fileName)
+    public void SetProfileImage(byte[] imageData, string contentType)
     {
-        ProfileImageFileName = fileName;
+        ProfileImageData = imageData;
+        ProfileImageContentType = contentType;
         UpdatedAt = DateTime.UtcNow;
     }
 
