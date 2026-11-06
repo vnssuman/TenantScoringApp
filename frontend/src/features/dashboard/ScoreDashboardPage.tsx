@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactElement } from 'react';
-import { Bell, Building2, ChevronRight, CircleUserRound, CreditCard, Home, LogOut, RefreshCw, ShieldCheck, Sparkles, WalletCards } from 'lucide-react';
+import { Bell, Building2, Camera, ChevronRight, CircleUserRound, CreditCard, Home, LogOut, RefreshCw, ShieldCheck, Sparkles, WalletCards } from 'lucide-react';
 import { getDashboardSummary } from '../../services/dashboardApi';
-import { getCurrentProfile } from '../../services/profileApi';
+import { getCurrentProfile, getProfileImage, uploadProfileImage } from '../../services/profileApi';
 import type { DashboardUserSummary } from '../../types/dashboard';
 import type { UserProfile } from '../../types/profile';
 import { MapTenantPage } from '../mapping/MapTenantPage';
@@ -21,18 +21,45 @@ export function ScoreDashboardPage({ onLogout, showProperties = false, showMapTe
   const [tab, setTab] = useState<Tab>('home');
   const [role, setRole] = useState<Role>('tenant');
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [profileImageError, setProfileImageError] = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('kirayeeToken'); 
     if (!token) { setError('Your session has expired. Please log in again.'); return; }
     getDashboardSummary(token).then(setSummary).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Dashboard could not be loaded.'));
-    getCurrentProfile().then((currentProfile) => {
+    getCurrentProfile().then(async (currentProfile) => {
       setProfile(currentProfile);
       if (currentProfile.currentRole.toLowerCase() !== 'both') {
         setRole(currentProfile.currentRole.toLowerCase() === 'owner' ? 'owner' : 'tenant');
       }
+      const image = await getProfileImage();
+      if (image) setProfileImageUrl(URL.createObjectURL(image));
     }).catch(() => undefined);
   }, []);
+
+  useEffect(() => () => {
+    if (profileImageUrl) URL.revokeObjectURL(profileImageUrl);
+  }, [profileImageUrl]);
+
+  async function handleProfileImageChange(image: File): Promise<void> {
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(image.type) || image.size > 5 * 1024 * 1024) {
+      setProfileImageError('Choose a PNG, JPEG, or WebP image up to 5 MB.');
+      return;
+    }
+    setIsUploadingImage(true);
+    setProfileImageError('');
+    try {
+      await uploadProfileImage(image);
+      const savedImage = await getProfileImage();
+      if (savedImage) setProfileImageUrl(URL.createObjectURL(savedImage));
+    } catch (reason) {
+      setProfileImageError(reason instanceof Error ? reason.message : 'Profile image could not be updated.');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  }
 
   function navigateToTab(nextTab: Tab): void {
     setTab(nextTab);
@@ -44,7 +71,6 @@ export function ScoreDashboardPage({ onLogout, showProperties = false, showMapTe
 
   return <section className="mobile-dashboard" aria-label="Kirayee dashboard">
     <header className="mobile-header"><div className="dashboard-brand"><span className="dashboard-brand-mark">K</span><span>Kirayee</span></div><div className="header-actions">{profile && !profile.profileStatus.isProfileComplete && <button className="completion-chip" type="button" onClick={() => { window.location.hash = 'update-profile'; }}>Profile {profile.profileStatus.completionPercentage}%</button>}<button className="icon-button" type="button" aria-label="Notifications"><Bell size={19} /></button><button className="icon-button" type="button" aria-label="Log out" onClick={onLogout}><LogOut size={18} /></button></div></header>
-    {profile && !profile.profileStatus.isProfileComplete && <button className="profile-alert" type="button" onClick={() => { window.location.hash = 'update-profile'; }}><ShieldCheck size={17} /><span><strong>Complete your profile</strong><small>{profile.profileStatus.completionPercentage}% complete · {profile.profileStatus.missingFields.join(', ')} pending</small></span><ChevronRight size={17} /></button>}
       {showTenantPayments
         ? <TenantPaymentRecordPage onBack={() => { setTab('explore'); window.location.hash = 'home'; }} />
         : showTenantHistory
@@ -55,7 +81,7 @@ export function ScoreDashboardPage({ onLogout, showProperties = false, showMapTe
         ? <MapTenantPage onBack={() => { setTab('explore'); window.location.hash = 'home'; }} />
         : showProperties
         ? <OwnerPropertiesPage onBack={() => { setTab('explore'); window.location.hash = 'home'; }} />
-        : tab === 'home' && <HomeTab summary={summary} role={role} showRoleSwitch={profile?.currentRole.toLowerCase() === 'both'} onRoleChange={setRole} />}
+        : tab === 'home' && <HomeTab summary={summary} role={role} showRoleSwitch={profile?.currentRole.toLowerCase() === 'both'} onRoleChange={setRole} profileId={profile?.profileId} profileImageUrl={profileImageUrl} isUploadingImage={isUploadingImage} profileImageError={profileImageError} onProfileImageChange={handleProfileImageChange} />}
       {!showProperties && !showMapTenant && !showTenantRequests && !showTenantHistory && !showTenantPayments && tab === 'explore' && (profile
         ? <ExplorerActionsGrid role={profile.currentRole.toLowerCase() === 'both' ? 'both' : role} />
         : <section className="dashboard-state" aria-live="polite"><RefreshCw className="spin" size={24} aria-hidden="true" /><p>Loading your profile...</p></section>)}
@@ -65,8 +91,8 @@ export function ScoreDashboardPage({ onLogout, showProperties = false, showMapTe
   </section>;
 }
 
-function HomeTab({ summary, role, showRoleSwitch, onRoleChange }: { summary: DashboardUserSummary; role: Role; showRoleSwitch: boolean; onRoleChange: (role: Role) => void }): ReactElement {
-  return <main className="mobile-content"><div className="welcome-row"><div><p className="mobile-kicker">Good morning</p><h1>{summary.fullName.split(' ')[0]}</h1></div><div className="avatar">{summary.fullName.charAt(0)}</div></div>{showRoleSwitch && <div className="role-switch" role="group" aria-label="Active role"><button className={role === 'tenant' ? 'active' : ''} type="button" onClick={() => onRoleChange('tenant')}>I’m a tenant</button><button className={role === 'owner' ? 'active' : ''} type="button" onClick={() => onRoleChange('owner')}>I’m an owner</button></div>}<div className="section-heading mobile-section-heading"><div><p className="mobile-kicker">Overview</p><h2>{role === 'tenant' ? 'Your rental readiness' : 'Your rental space'}</h2></div><ChevronRight size={18} /></div><div className="overview-grid"><OverviewCard icon={<ShieldCheck size={18} />} label="Overall Score" value={summary.overallScore === undefined ? 'Not available' : `${summary.overallScore}/100`} tone="mint" /><OverviewCard icon={<Sparkles size={18} />} label="Rewards" value="120 pts" tone="yellow" /></div><section className="next-step"><div className="next-step-icon"><Sparkles size={18} /></div><div><p className="mobile-kicker">Next step</p><strong>Complete your identity checks</strong><span>Verify PAN and Aadhaar to unlock all features.</span></div><ChevronRight size={18} /></section></main>;
+function HomeTab({ summary, role, showRoleSwitch, onRoleChange, profileId, profileImageUrl, isUploadingImage, profileImageError, onProfileImageChange }: { summary: DashboardUserSummary; role: Role; showRoleSwitch: boolean; onRoleChange: (role: Role) => void; profileId?: string; profileImageUrl: string | null; isUploadingImage: boolean; profileImageError: string; onProfileImageChange: (image: File) => void }): ReactElement {
+  return <main className="mobile-content"><div className="welcome-row"><div><p className="mobile-kicker">Good morning</p><h1>{summary.fullName.split(' ')[0]}</h1></div><div className="avatar">{profileImageUrl ? <img src={profileImageUrl} alt="" /> : summary.fullName.charAt(0)}</div></div><section className="profile-identity-card" aria-label="Kirayee profile identity"><div className="identity-card-top"><span className="identity-card-brand"><span className="dashboard-brand-mark">K</span> Kirayee</span><span className="identity-role">{role === 'owner' ? 'OWNER' : 'TENANT'}</span></div><div className="identity-card-ids"><div className="identity-card-id"><span>Kirayee ID</span><strong>{summary.tenantId}</strong></div><div className="identity-card-id"><span>Profile ID</span><strong>{profileId ?? 'Loading...'}</strong></div></div><div className="identity-card-bottom"><div className="identity-photo-wrap">{profileImageUrl ? <img className="identity-photo" src={profileImageUrl} alt={`${summary.fullName} profile`} /> : <div className="identity-photo identity-photo-placeholder" aria-label="No profile image">{summary.fullName.charAt(0)}</div>}<label className={`identity-photo-update ${isUploadingImage ? 'uploading' : ''}`} title="Update profile image"><Camera size={14} /><span>{isUploadingImage ? 'Updating...' : 'Update image'}</span><input type="file" accept="image/png,image/jpeg,image/webp" disabled={isUploadingImage} onChange={(event) => { const image = event.target.files?.[0]; if (image) onProfileImageChange(image); event.target.value = ''; }} /></label></div><div className="identity-name-block"><span>Profile holder</span><strong title={summary.fullName}>{summary.fullName}</strong></div></div></section>{profileImageError && <p className="profile-image-error" role="alert">{profileImageError}</p>}{showRoleSwitch && <div className="role-switch" role="group" aria-label="Active role"><button className={role === 'tenant' ? 'active' : ''} type="button" onClick={() => onRoleChange('tenant')}>I’m a tenant</button><button className={role === 'owner' ? 'active' : ''} type="button" onClick={() => onRoleChange('owner')}>I’m an owner</button></div>}<div className="section-heading mobile-section-heading"><div><p className="mobile-kicker">Overview</p><h2>{role === 'tenant' ? 'Your rental readiness' : 'Your rental space'}</h2></div><ChevronRight size={18} /></div><div className="overview-grid"><OverviewCard icon={<ShieldCheck size={18} />} label="Overall Score" value={summary.overallScore === undefined ? 'Not available' : `${summary.overallScore}/100`} tone="mint" /><OverviewCard icon={<Sparkles size={18} />} label="Rewards" value="120 pts" tone="yellow" /></div><section className="next-step"><div className="next-step-icon"><Sparkles size={18} /></div><div><p className="mobile-kicker">Next step</p><strong>Complete your identity checks</strong><span>Verify PAN and Aadhaar to unlock all features.</span></div><ChevronRight size={18} /></section></main>;
 }
 
 function ProfileTab({ summary, profile }: { summary: DashboardUserSummary; profile: UserProfile | null }): ReactElement { return <main className="mobile-content"><p className="mobile-kicker">Account</p><h1 className="tab-title">Your profile</h1><section className="profile-intro"><div className="large-avatar">{summary.fullName.charAt(0)}</div><div><h2>{summary.fullName}</h2><p>{summary.email}</p></div></section><div className="profile-list"><ProfileRow label="Kirayee ID" value={summary.tenantId} /><ProfileRow label="Mobile number" value={summary.mobileNumber} /><ProfileRow label="Roles" value={summary.assignedRoles.join(' / ')} /></div><div className="settings-links"><button type="button" onClick={() => { window.location.hash = 'update-profile'; }}><ShieldCheck size={17} /><span>Update identity documents<small>{profile?.profileStatus.isPanVerified && profile.profileStatus.isAadhaarVerified ? 'Complete' : 'Pending verification'}</small></span><ChevronRight size={17} /></button><button type="button" onClick={() => { window.location.hash = 'update-profile'; }}><Bell size={17} /><span>Verify contact info<small>{profile?.profileStatus.isEmailVerified && profile.profileStatus.isMobileVerified ? 'Complete' : 'Pending verification'}</small></span><ChevronRight size={17} /></button></div></main>; }

@@ -53,6 +53,7 @@ public sealed class TenantDbContext(DbContextOptions<TenantDbContext> options) :
         profile.HasIndex(item => item.UserId).IsUnique();
         profile.Property(item => item.FirstName).HasMaxLength(100);
         profile.Property(item => item.LastName).HasMaxLength(100);
+        profile.Property(item => item.ProfileImageFileName).HasMaxLength(100);
         profile.Property(item => item.PanNumber).HasMaxLength(10);
         profile.Property(item => item.AadhaarNumber).HasMaxLength(12);
         profile.Property(item => item.BehavioralScore).HasPrecision(5, 2);

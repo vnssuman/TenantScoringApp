@@ -60,6 +60,7 @@ public sealed class UserProfile
     public string? PanNumber { get; private set; }
     public bool PanVerified { get; private set; }
     public string? AadhaarNumber { get; private set; }
+    public string? ProfileImageFileName { get; private set; }
     public bool AadhaarVerified { get; private set; }
     public bool BehavioralAssessmentCompleted { get; private set; }
     public decimal BehavioralScore { get; private set; }
@@ -74,6 +75,12 @@ public sealed class UserProfile
         LastName = lastName?.Trim();
         PanNumber = panNumber?.Trim().ToUpperInvariant();
         AadhaarNumber = aadhaarNumber?.Trim();
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetProfileImage(string fileName)
+    {
+        ProfileImageFileName = fileName;
         UpdatedAt = DateTime.UtcNow;
     }
 

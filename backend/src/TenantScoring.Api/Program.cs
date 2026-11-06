@@ -29,6 +29,7 @@ builder.Services.AddSingleton<IAuthenticationTokenStore, AuthenticationTokenStor
 
 var app = builder.Build();
 var agreementDocumentsDirectory = Path.Combine(app.Environment.ContentRootPath, "App_Data", "RentalAgreements");
+var profileImagesDirectory = Path.Combine(app.Environment.ContentRootPath, "App_Data", "ProfileImages");
 
 if (app.Environment.IsDevelopment())
 {
@@ -46,6 +47,16 @@ Guid? GetUserId(HttpRequest request)
     if (!authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)) return null;
     var token = authorization["Bearer ".Length..].Trim();
     return tokenStore.TryGetTenantId(token, out var userId) && Guid.TryParse(userId, out var parsed) ? parsed : null;
+}
+
+string? GetProfileImageExtension(ReadOnlySpan<byte> signature)
+{
+    if (signature.StartsWith(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 })) return ".png";
+    if (signature.Length >= 3 && signature[0] == 0xff && signature[1] == 0xd8 && signature[2] == 0xff) return ".jpg";
+    if (signature.Length >= 12
+        && signature[..4].SequenceEqual("RIFF"u8)
+        && signature[8..12].SequenceEqual("WEBP"u8)) return ".webp";
+    return null;
 }
 
 app.MapPost("/api/kirayee/auth/register", async (KirayeeRegisterRequest request, IKirayeeService service, CancellationToken cancellationToken) =>
@@ -73,6 +84,65 @@ app.MapGet("/api/user/me", async (HttpRequest request, IKirayeeService service, 
     if (userId is null) return Results.Unauthorized();
     var profile = await service.GetProfileAsync(userId.Value, cancellationToken);
     return profile is null ? Results.NotFound() : Results.Ok(profile);
+});
+
+app.MapGet("/api/user/profile-image", async (HttpRequest request, IKirayeeService service, CancellationToken cancellationToken) =>
+{
+    var userId = GetUserId(request);
+    if (userId is null) return Results.Unauthorized();
+    var fileName = await service.GetProfileImageFileNameAsync(userId.Value, cancellationToken);
+    if (string.IsNullOrWhiteSpace(fileName)) return Results.NotFound();
+    var safeFileName = Path.GetFileName(fileName);
+    var filePath = Path.Combine(profileImagesDirectory, safeFileName);
+    if (!File.Exists(filePath)) return Results.NotFound();
+    var contentType = Path.GetExtension(safeFileName).ToLowerInvariant() switch
+    {
+        ".png" => "image/png",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".webp" => "image/webp",
+        _ => null
+    };
+    return contentType is null ? Results.NotFound() : Results.File(filePath, contentType);
+});
+
+app.MapPost("/api/user/profile-image", async (HttpRequest request, IKirayeeService service, CancellationToken cancellationToken) =>
+{
+    var userId = GetUserId(request);
+    if (userId is null) return Results.Unauthorized();
+    var form = await request.ReadFormAsync(cancellationToken);
+    var image = form.Files.GetFile("image");
+    if (image is null || image.Length == 0 || image.Length > 5 * 1024 * 1024)
+        return Results.BadRequest(new { message = "Choose an image no larger than 5 MB." });
+
+    await using var imageStream = image.OpenReadStream();
+    var signature = new byte[12];
+    var signatureLength = await imageStream.ReadAsync(signature.AsMemory(), cancellationToken);
+    var extension = GetProfileImageExtension(signature.AsSpan(0, signatureLength));
+    if (extension is null)
+        return Results.BadRequest(new { message = "Profile image must be a PNG, JPEG, or WebP file." });
+
+    Directory.CreateDirectory(profileImagesDirectory);
+    var fileName = $"{Guid.NewGuid():N}{extension}";
+    var filePath = Path.Combine(profileImagesDirectory, fileName);
+    imageStream.Position = 0;
+    await using (var fileStream = File.Create(filePath))
+    {
+        await imageStream.CopyToAsync(fileStream, cancellationToken);
+    }
+
+    var update = await service.UpdateProfileImageAsync(userId.Value, fileName, cancellationToken);
+    if (!update.Updated)
+    {
+        File.Delete(filePath);
+        return Results.NotFound();
+    }
+    if (!string.IsNullOrWhiteSpace(update.PreviousFileName))
+    {
+        var oldPath = Path.Combine(profileImagesDirectory, Path.GetFileName(update.PreviousFileName));
+        if (File.Exists(oldPath)) File.Delete(oldPath);
+    }
+
+    return Results.Ok(new { message = "Profile image updated." });
 });
 
 app.MapGet("/api/kirayee/profile", async (HttpRequest request, IKirayeeService service, CancellationToken cancellationToken) =>

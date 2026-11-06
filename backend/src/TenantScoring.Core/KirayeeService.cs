@@ -39,6 +39,8 @@ public interface IKirayeeService
 {
     Task<KirayeeRegistrationResult> RegisterAsync(KirayeeRegisterRequest request, CancellationToken cancellationToken = default);
     Task<ProfileResponse?> GetProfileAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<string?> GetProfileImageFileNameAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<(bool Updated, string? PreviousFileName)> UpdateProfileImageAsync(Guid userId, string fileName, CancellationToken cancellationToken = default);
     Task<ProfileStatusDto?> GetProfileStatusAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<BehavioralAssessmentResponse?> GetBehavioralAssessmentAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<BehavioralAssessmentResponse?> SubmitBehavioralAssessmentAsync(Guid userId, BehavioralAssessmentRequest request, CancellationToken cancellationToken = default);
@@ -89,6 +91,19 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
 
     public async Task<ProfileResponse?> GetProfileAsync(Guid userId, CancellationToken cancellationToken = default) =>
         await BuildProfileAsync(userId, cancellationToken);
+
+    public async Task<string?> GetProfileImageFileNameAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        (await repository.FindProfileAsync(userId, cancellationToken))?.ProfileImageFileName;
+
+    public async Task<(bool Updated, string? PreviousFileName)> UpdateProfileImageAsync(Guid userId, string fileName, CancellationToken cancellationToken = default)
+    {
+        var profile = await repository.FindProfileAsync(userId, cancellationToken);
+        if (profile is null) return (false, null);
+        var previousFileName = profile.ProfileImageFileName;
+        profile.SetProfileImage(fileName);
+        await repository.SaveChangesAsync(cancellationToken);
+        return (true, previousFileName);
+    }
 
     public async Task<ProfileStatusDto?> GetProfileStatusAsync(Guid userId, CancellationToken cancellationToken = default)
     {
@@ -409,7 +424,7 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
     {
         var user = await repository.FindUserAsync(userId, cancellationToken);
         var profile = await repository.FindProfileAsync(userId, cancellationToken);
-        return user is null || profile is null ? null : new ProfileResponse(user.UserId, profile.FirstName, profile.LastName, user.MobileNumber, user.Email, profile.PanNumber, profile.AadhaarNumber, user.MobileVerified, user.EmailVerified, profile.PanVerified, profile.AadhaarVerified, profile.BehavioralAssessmentCompleted, profile.BehavioralScore, profile.ProfileCompletionScore, profile.RewardPoints, user.CurrentRole, BuildProfileStatus(user, profile));
+        return user is null || profile is null ? null : new ProfileResponse(user.UserId, profile.ProfileId, profile.FirstName, profile.LastName, user.MobileNumber, user.Email, profile.PanNumber, profile.AadhaarNumber, user.MobileVerified, user.EmailVerified, profile.PanVerified, profile.AadhaarVerified, profile.BehavioralAssessmentCompleted, profile.BehavioralScore, profile.ProfileCompletionScore, profile.RewardPoints, user.CurrentRole, BuildProfileStatus(user, profile));
     }
 
     private static ProfileStatusDto BuildProfileStatus(User user, UserProfile profile)

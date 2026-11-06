@@ -13,7 +13,7 @@ public sealed record BehavioralAnswerRequest(Guid QuestionId, string Answer);
 public sealed record BehavioralAssessmentRequest(IReadOnlyList<BehavioralAnswerRequest> Answers);
 public sealed record BehavioralAssessmentResponse(bool Completed, decimal Score, IReadOnlyList<BehavioralQuestionDto> Questions, IReadOnlyList<BehavioralAnswerRequest> Answers);
 public sealed record AuthResponseDto(Guid UserId, string? FirstName, string CurrentRole, string Token, ProfileStatusDto ProfileStatus);
-public sealed record ProfileResponse(Guid UserId, string? FirstName, string? LastName, string? MobileNumber, string? Email, string? PanNumber, string? AadhaarNumber, bool MobileVerified, bool EmailVerified, bool PanVerified, bool AadhaarVerified, bool BehavioralAssessmentCompleted, decimal BehavioralScore, int ProfileCompletionScore, int RewardPoints, string CurrentRole, ProfileStatusDto ProfileStatus);
+public sealed record ProfileResponse(Guid UserId, Guid ProfileId, string? FirstName, string? LastName, string? MobileNumber, string? Email, string? PanNumber, string? AadhaarNumber, bool MobileVerified, bool EmailVerified, bool PanVerified, bool AadhaarVerified, bool BehavioralAssessmentCompleted, decimal BehavioralScore, int ProfileCompletionScore, int RewardPoints, string CurrentRole, ProfileStatusDto ProfileStatus);
 public sealed record RoleUpdateRequest(string Role);
 public sealed record ScoreResponse(Guid ScoreId, decimal FinalScore, int ProfileScore, decimal CreditScore, decimal PaymentHistory, decimal OwnerFeedback, DateTime CalculatedAt, DateTime ExpiresAt, bool IsExpired);
 public sealed record ScoreRequest(decimal CreditScore, decimal PaymentHistory, decimal OwnerFeedback);

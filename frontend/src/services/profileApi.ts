@@ -19,4 +19,25 @@ export function updateProfile(data: ProfileUpdateRequest): Promise<UserProfile> 
 export function verifyProfile(data: VerificationRequest): Promise<{ verified: boolean }> { return request<{ verified: boolean }>('/api/kirayee/verification', { method: 'POST', body: JSON.stringify(data) }); }
 export function getBehavioralAssessment(): Promise<BehavioralAssessment> { return request<BehavioralAssessment>('/api/kirayee/behavioral-assessment'); }
 export function submitBehavioralAssessment(answers: BehavioralAnswer[]): Promise<BehavioralAssessment> { return request<BehavioralAssessment>('/api/kirayee/behavioral-assessment', { method: 'POST', body: JSON.stringify({ answers }) }); }
+export async function getProfileImage(): Promise<Blob | null> {
+  const token = localStorage.getItem('kirayeeToken');
+  const response = await fetch('/api/user/profile-image', { headers: { Authorization: `Bearer ${token ?? ''}` } });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error('Profile image could not be loaded.');
+  return response.blob();
+}
+export async function uploadProfileImage(image: File): Promise<void> {
+  const form = new FormData();
+  form.set('image', image);
+  const token = localStorage.getItem('kirayeeToken');
+  const response = await fetch('/api/user/profile-image', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token ?? ''}` },
+    body: form,
+  });
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(payload?.message ?? 'Profile image could not be updated.');
+  }
+}
 export function getProfileStatus(profile: UserProfile): ProfileStatus { return profile.profileStatus; }
