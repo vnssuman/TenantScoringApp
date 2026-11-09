@@ -86,6 +86,14 @@ export function withdrawRentalRequest(leaseId: string): Promise<void> {
   return request<void>(`/api/kirayee/leases/${encodeURIComponent(leaseId)}/withdraw`, { method: 'POST' });
 }
 
+export function updateSentBackRentalRequest(leaseId: string, input: Pick<RentalRequestInput, 'rentAmount' | 'startDate' | 'endDate'>): Promise<RentalRequestRecord> {
+  return request<RentalRequestRecord>(`/api/rental-requests/${encodeURIComponent(leaseId)}/resubmit`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+}
+
 export async function downloadRentalAgreement(leaseId: string): Promise<void> {
   const token = localStorage.getItem('kirayeeToken');
   const response = await fetch(`${API_BASE_URL}/api/rental-requests/${encodeURIComponent(leaseId)}/document`, {

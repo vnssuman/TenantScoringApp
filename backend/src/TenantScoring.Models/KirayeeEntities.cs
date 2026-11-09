@@ -284,6 +284,15 @@ public sealed class Lease
         Status = "SentBack";
     }
 
+    public void UpdateSentBackRequest(decimal agreedRent, DateTime startDate, DateTime endDate)
+    {
+        if (Status != "SentBack") throw new InvalidOperationException("Only sent-back rental requests can be edited.");
+        AgreedRent = agreedRent;
+        StartDate = startDate;
+        EndDate = endDate;
+        Status = "Pending";
+    }
+
     public void Withdraw() => Status = "Withdrawn";
     public void RequestCancellation() => Status = "CancellationRequested";
     public void Terminate() => Status = "Terminated";

@@ -96,6 +96,31 @@ public sealed class PropertyManagementTests
     }
 
     [Fact]
+    public void OwnerCanEditAndResendSentBackRentalRequest()
+    {
+        var lease = new Lease(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 20000, 0);
+        lease.SendBack("Please adjust the requested start date.");
+        var startDate = DateTime.UtcNow.Date.AddDays(3);
+        var endDate = startDate.AddMonths(12);
+
+        lease.UpdateSentBackRequest(22000, startDate, endDate);
+
+        Assert.Equal("Pending", lease.Status);
+        Assert.Equal(22000, lease.AgreedRent);
+        Assert.Equal(startDate, lease.StartDate);
+        Assert.Equal(endDate, lease.EndDate);
+        Assert.Equal("Please adjust the requested start date.", lease.TenantComments);
+    }
+
+    [Fact]
+    public void CannotEditRequestThatWasNotSentBack()
+    {
+        var lease = new Lease(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 20000, 0);
+
+        Assert.Throws<InvalidOperationException>(() => lease.UpdateSentBackRequest(22000, DateTime.UtcNow.Date.AddDays(1), DateTime.UtcNow.Date.AddDays(30)));
+    }
+
+    [Fact]
     public void PropertyOccupancyDependsOnALiveLease()
     {
         var property = new Property(Guid.NewGuid(), "Skyline", "Apartment", "12 Park Road", "Pune", "Maharashtra", 20000);

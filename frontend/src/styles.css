@@ -305,12 +305,17 @@ button { cursor: pointer; }
 .rental-request-metadata span { margin-bottom: 4px; color: #83938b; font-size: 10px; }
 .rental-request-metadata strong { overflow-wrap: anywhere; color: #344f45; font-size: 12px; font-weight: 700; }
 .rental-request-metadata .mapping-profile-id { color: #3673c4; }
-.rental-request-footer { padding-top: 11px; border-top: 1px solid #edf1ed; }
+.rental-request-footer { display: grid; gap: 10px; padding-top: 11px; border-top: 1px solid #edf1ed; }
 .rental-request-footer button { display: inline-flex; max-width: 100%; align-items: center; gap: 6px; padding: 0; border: 0; color: #527268; background: transparent; font-size: 10px; font-weight: 600; text-align: left; }
 .rental-request-footer button svg { flex: 0 0 auto; color: #8c7650; }
 .rental-request-footer small { display: block; margin-top: 6px; color: #b8493a; font-size: 10px; }
-.rental-request-footer .mapping-withdraw-button { margin-top: 12px; padding: 6px 0; color: #a63d34; }
-.rental-request-footer .mapping-withdraw-button:hover:not(:disabled) { color: #7e2822; }
+.mapping-request-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.rental-request-footer .mapping-request-actions button { min-height: 36px; justify-content: center; padding: 0 12px; border: 1px solid #d4dfd6; border-radius: 7px; font-size: 11px; font-weight: 700; text-align: center; }
+.rental-request-footer .mapping-request-actions button svg { color: currentColor; }
+.rental-request-footer .mapping-request-actions .mapping-edit-request-button { color: #226d5b; background: #f0faf4; }
+.rental-request-footer .mapping-request-actions .mapping-edit-request-button:hover:not(:disabled) { border-color: #9dc8b4; background: #e8f8f0; }
+.rental-request-footer .mapping-request-actions .mapping-withdraw-button { margin: 0; color: #a63d34; background: #fff; }
+.rental-request-footer .mapping-request-actions .mapping-withdraw-button:hover:not(:disabled) { border-color: #e5b7b0; color: #7e2822; background: #fff8f6; }
 .rental-request-footer .mapping-withdraw-button:disabled { cursor: wait; opacity: .6; }
 .tenant-rental-request-card { min-width: 0; padding: 15px; border: 1px solid #e1e9e2; border-radius: 10px; background: #fff; box-shadow: 0 4px 12px rgba(38, 70, 59, .045); animation: rise-in 250ms ease both; }
 .tenant-rental-request-card .rental-request-status.rejected { color: #a63d34; background: #fae9e4; }

@@ -60,6 +60,7 @@ public interface IKirayeeService
     Task<IReadOnlyList<TenantRentalRequestResponse>?> GetTenantRentalHistoryAsync(Guid tenantId, CancellationToken cancellationToken = default);
     Task<RentalRequestResponse?> CreateRentalRequestAsync(Guid ownerId, Guid propertyId, Guid tenantId, decimal rentAmount, DateTime startDate, DateTime endDate, string? documentPath, CancellationToken cancellationToken = default);
     Task<LeaseResponse?> SendBackRentalRequestAsync(Guid tenantId, Guid leaseId, string comments, CancellationToken cancellationToken = default);
+    Task<RentalRequestResponse?> UpdateSentBackRentalRequestAsync(Guid ownerId, Guid leaseId, decimal rentAmount, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default);
     Task<(string? DocumentPath, bool IsAuthorized)> GetRentalRequestDocumentAsync(Guid userId, Guid leaseId, CancellationToken cancellationToken = default);
     Task<LeaseResponse?> CreateLeaseAsync(Guid tenantId, LeaseRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<LeaseResponse>> GetLeasesAsync(Guid userId, CancellationToken cancellationToken = default);
@@ -328,6 +329,17 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
         lease.SendBack(comments.Trim());
         await repository.SaveChangesAsync(cancellationToken);
         return ToLease(lease);
+    }
+
+    public async Task<RentalRequestResponse?> UpdateSentBackRentalRequestAsync(Guid ownerId, Guid leaseId, decimal rentAmount, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
+    {
+        var lease = await repository.FindLeaseAsync(leaseId, cancellationToken);
+        if (lease is null || lease.OwnerId != ownerId || lease.Status != "SentBack" || rentAmount <= 0
+            || startDate.Date < DateTime.UtcNow.Date || endDate.Date <= startDate.Date) return null;
+
+        lease.UpdateSentBackRequest(rentAmount, startDate, endDate);
+        await repository.SaveChangesAsync(cancellationToken);
+        return ToRentalRequest(lease);
     }
 
     public async Task<(string? DocumentPath, bool IsAuthorized)> GetRentalRequestDocumentAsync(Guid userId, Guid leaseId, CancellationToken cancellationToken = default)
