@@ -85,6 +85,17 @@ public sealed class PropertyManagementTests
     }
 
     [Fact]
+    public void SendingBackRentalRequestStoresCommentsAndUpdatesStatus()
+    {
+        var lease = new Lease(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 20000, 0);
+
+        lease.SendBack("Please adjust the requested start date.");
+
+        Assert.Equal("SentBack", lease.Status);
+        Assert.Equal("Please adjust the requested start date.", lease.TenantComments);
+    }
+
+    [Fact]
     public void PropertyOccupancyDependsOnALiveLease()
     {
         var property = new Property(Guid.NewGuid(), "Skyline", "Apartment", "12 Park Road", "Pune", "Maharashtra", 20000);

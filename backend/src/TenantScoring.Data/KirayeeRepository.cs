@@ -58,7 +58,12 @@ public sealed class KirayeeRepository(TenantDbContext dbContext) : IKirayeeRepos
     {
         var query = dbContext.Leases.AsNoTracking().Include(lease => lease.Property).Include(lease => lease.Tenant).ThenInclude(tenant => tenant.Profile)
             .Where(lease => lease.OwnerId == ownerId);
-        if (!string.IsNullOrWhiteSpace(status)) query = query.Where(lease => lease.Status == status);
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            query = status == "Pending"
+                ? query.Where(lease => lease.Status == "Pending" || lease.Status == "SentBack")
+                : query.Where(lease => lease.Status == status);
+        }
         return await query.OrderByDescending(lease => lease.CreatedAt).ToListAsync(cancellationToken);
     }
     public async Task<IReadOnlyList<Lease>> GetTenantRentalRequestsAsync(Guid tenantId, string? status, CancellationToken cancellationToken)

@@ -16,6 +16,7 @@ export interface RentalRequestRecord {
   startDate: string | null;
   endDate: string | null;
   status: string;
+  tenantComments: string | null;
   hasAgreementDocument: boolean;
 }
 
@@ -33,6 +34,7 @@ export interface TenantRentalRequestRecord {
   endDate: string | null;
   createdAt: string;
   status: string;
+  tenantComments: string | null;
   hasAgreementDocument: boolean;
 }
 

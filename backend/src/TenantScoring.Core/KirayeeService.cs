@@ -59,6 +59,7 @@ public interface IKirayeeService
     Task<IReadOnlyList<TenantRentalRequestResponse>?> GetTenantRentalRequestsAsync(Guid tenantId, string? status, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TenantRentalRequestResponse>?> GetTenantRentalHistoryAsync(Guid tenantId, CancellationToken cancellationToken = default);
     Task<RentalRequestResponse?> CreateRentalRequestAsync(Guid ownerId, Guid propertyId, Guid tenantId, decimal rentAmount, DateTime startDate, DateTime endDate, string? documentPath, CancellationToken cancellationToken = default);
+    Task<LeaseResponse?> SendBackRentalRequestAsync(Guid tenantId, Guid leaseId, string comments, CancellationToken cancellationToken = default);
     Task<(string? DocumentPath, bool IsAuthorized)> GetRentalRequestDocumentAsync(Guid userId, Guid leaseId, CancellationToken cancellationToken = default);
     Task<LeaseResponse?> CreateLeaseAsync(Guid tenantId, LeaseRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<LeaseResponse>> GetLeasesAsync(Guid userId, CancellationToken cancellationToken = default);
@@ -294,6 +295,7 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
             lease.EndDate,
             lease.CreatedAt,
             lease.Status,
+            lease.TenantComments,
             !string.IsNullOrWhiteSpace(lease.AgreementDocumentUrl))).ToArray();
     }
 
@@ -314,7 +316,18 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
         var lease = new Lease(property.PropertyId, tenantId, ownerId, rentAmount, property.AdvanceAmount);
         lease.SetRentalTerms(startDate, endDate, documentPath);
         await repository.AddLeaseAsync(lease, cancellationToken);
-        return new RentalRequestResponse(lease.LeaseId, property.PropertyId, property.PropertyName, property.Location, tenant.UserId, tenant.Profile!.ProfileCode, string.Join(" ", new[] { tenant.Profile.FirstName, tenant.Profile.LastName }.Where(name => !string.IsNullOrWhiteSpace(name))), lease.AgreedRent, lease.StartDate, lease.EndDate, lease.Status, !string.IsNullOrWhiteSpace(lease.AgreementDocumentUrl));
+        return new RentalRequestResponse(lease.LeaseId, property.PropertyId, property.PropertyName, property.Location, tenant.UserId, tenant.Profile!.ProfileCode, string.Join(" ", new[] { tenant.Profile.FirstName, tenant.Profile.LastName }.Where(name => !string.IsNullOrWhiteSpace(name))), lease.AgreedRent, lease.StartDate, lease.EndDate, lease.Status, lease.TenantComments, !string.IsNullOrWhiteSpace(lease.AgreementDocumentUrl));
+    }
+
+    public async Task<LeaseResponse?> SendBackRentalRequestAsync(Guid tenantId, Guid leaseId, string comments, CancellationToken cancellationToken = default)
+    {
+        var lease = await repository.FindLeaseAsync(leaseId, cancellationToken);
+        if (lease is null || lease.TenantId != tenantId || lease.Status != "Pending"
+            || string.IsNullOrWhiteSpace(comments) || comments.Trim().Length > 2000) return null;
+
+        lease.SendBack(comments.Trim());
+        await repository.SaveChangesAsync(cancellationToken);
+        return ToLease(lease);
     }
 
     public async Task<(string? DocumentPath, bool IsAuthorized)> GetRentalRequestDocumentAsync(Guid userId, Guid leaseId, CancellationToken cancellationToken = default)
@@ -376,14 +389,13 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
         if (lease is null || lease.OwnerId != userId && lease.TenantId != userId) return null;
         switch (action.Trim().ToLowerInvariant())
         {
-            case "accept" when lease.TenantId == userId:
+            case "accept" when lease.TenantId == userId && lease.Status == "Pending":
                 lease.Accept();
                 lease.Property.SetStatus("Leased");
                 await repository.AddPaymentsAsync(CreateMissingMonthlyPayments(lease), cancellationToken);
                 break;
-            case "reject" when lease.TenantId == userId: lease.Reject(); break;
-            case "withdraw" when lease.OwnerId == userId && lease.Status == "Pending": lease.Withdraw(); break;
-            case "cancel" when lease.Status is "Pending" or "Active": lease.RequestCancellation(); break;
+            case "withdraw" when lease.OwnerId == userId && lease.Status is ("Pending" or "SentBack"): lease.Withdraw(); break;
+            case "cancel" when lease.Status == "Active": lease.RequestCancellation(); break;
             case "terminate" when lease.OwnerId == userId && lease.Status == "CancellationRequested": lease.Terminate(); lease.Property.SetStatus("Available"); break;
             default: return null;
         }
@@ -450,7 +462,7 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
     private static bool ValidScore(ScoreRequest request) => new[] { request.CreditScore, request.PaymentHistory, request.OwnerFeedback }.All(value => value is >= 0 and <= 100);
     private static PropertyResponse ToProperty(Property property) => new(property.PropertyId, property.PropertyName, property.Location, property.RentAmount, property.AdvanceAmount, property.Status, property.BankAccountId);
     private static PropertyManagementResponse ToPropertyManagement(Property property) => new(property.PropertyId, property.PropertyName, property.PropertyType, property.Address, property.City, property.State, property.RentAmount, !property.HasLiveLeaseOn(DateTime.UtcNow));
-    private static RentalRequestResponse ToRentalRequest(Lease lease) => new(lease.LeaseId, lease.PropertyId, lease.Property.PropertyName, lease.Property.Location, lease.TenantId, lease.Tenant.Profile!.ProfileCode, string.Join(" ", new[] { lease.Tenant.Profile.FirstName, lease.Tenant.Profile.LastName }.Where(name => !string.IsNullOrWhiteSpace(name))), lease.AgreedRent, lease.StartDate, lease.EndDate, lease.Status, !string.IsNullOrWhiteSpace(lease.AgreementDocumentUrl));
+    private static RentalRequestResponse ToRentalRequest(Lease lease) => new(lease.LeaseId, lease.PropertyId, lease.Property.PropertyName, lease.Property.Location, lease.TenantId, lease.Tenant.Profile!.ProfileCode, string.Join(" ", new[] { lease.Tenant.Profile.FirstName, lease.Tenant.Profile.LastName }.Where(name => !string.IsNullOrWhiteSpace(name))), lease.AgreedRent, lease.StartDate, lease.EndDate, lease.Status, lease.TenantComments, !string.IsNullOrWhiteSpace(lease.AgreementDocumentUrl));
     private static bool ValidPropertyRequest(PropertyManagementRequest request) =>
         !string.IsNullOrWhiteSpace(request.PropertyName) && request.PropertyName.Trim().Length <= 150
         && request.PropertyType is "Apartment" or "Villa" or "Independent House"

@@ -353,6 +353,14 @@ app.MapPost("/api/kirayee/leases/{leaseId:guid}/{action}", async (HttpRequest re
     return lease is null ? Results.BadRequest(new { message = "The lease action is not permitted." }) : Results.Ok(lease);
 });
 
+app.MapPost("/api/kirayee/leases/{leaseId:guid}/send-back", async (HttpRequest request, Guid leaseId, TenantRequestCommentRequest body, IKirayeeService service, CancellationToken cancellationToken) =>
+{
+    var userId = GetUserId(request);
+    if (userId is null) return Results.Unauthorized();
+    var lease = await service.SendBackRentalRequestAsync(userId.Value, leaseId, body.Comments, cancellationToken);
+    return lease is null ? Results.BadRequest(new { message = "A comment is required and the rental request must be pending." }) : Results.Ok(lease);
+});
+
 app.MapPost("/api/kirayee/payments/{paymentId:guid}/pay", async (HttpRequest request, Guid paymentId, PaymentRequest body, IKirayeeService service, CancellationToken cancellationToken) =>
 {
     var userId = GetUserId(request);

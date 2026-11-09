@@ -255,6 +255,7 @@ public sealed class Lease
     public decimal AgreedRent { get; private set; }
     public decimal AgreedAdvance { get; private set; }
     public string Status { get; private set; } = "Pending";
+    public string? TenantComments { get; private set; }
     public string? AgreementDocumentUrl { get; private set; }
     public DateTime? StartDate { get; private set; }
     public DateTime? EndDate { get; private set; }
@@ -277,7 +278,12 @@ public sealed class Lease
         EndDate = endDate;
         AgreementDocumentUrl = agreementDocumentUrl;
     }
-    public void Reject() => Status = "Rejected";
+    public void SendBack(string comments)
+    {
+        TenantComments = comments;
+        Status = "SentBack";
+    }
+
     public void Withdraw() => Status = "Withdrawn";
     public void RequestCancellation() => Status = "CancellationRequested";
     public void Terminate() => Status = "Terminated";
