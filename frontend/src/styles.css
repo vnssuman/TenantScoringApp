@@ -504,3 +504,31 @@ button { cursor: pointer; }
 .feedback-history-toggle[aria-expanded="true"] > svg { transform: rotate(180deg); }
 .feedback-history-rating { min-height: 24px; }
 .feedback-history-rating span { margin-left: 5px; color: #82938a; font-size: 10px; }
+
+/* Authentication uses the same palette and typography as the dashboard. */
+.registration-card { width: min(100%, 480px); color: #17352f; background: #f7f8f4; box-shadow: 0 16px 32px rgba(38, 70, 59, .1); }
+.registration-card .brand-logo { display: flex; width: auto; height: auto; align-items: center; justify-content: center; gap: 9px; margin: 0 auto 30px; color: #17352f; background: transparent; font: 700 16px 'Space Grotesk', sans-serif; letter-spacing: 0; }
+.registration-card .brand-logo::before { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 9px; color: #fff; background: #226d5b; font-size: 14px; content: 'K'; }
+.registration-card .login-screen .brand-logo { margin-bottom: 30px; }
+.registration-card .login-eyebrow, .registration-card .form-heading .login-eyebrow, .registration-card .success-panel .eyebrow { margin: 0 0 8px; color: #789087; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.registration-card .login-screen h1, .registration-card .form-heading h1, .registration-card .success-panel h2 { margin: 0 0 10px; color: #24433c; font: 600 24px/1.2 'Space Grotesk', sans-serif; }
+.registration-card .login-copy, .registration-card .form-heading p, .registration-card .success-copy { color: #71837b; font-size: 13px; line-height: 1.55; }
+.registration-card .form-heading { text-align: center; }
+.registration-card .progress-track { height: 5px; margin-bottom: 26px; background: #e0e9e1; }
+.registration-card .progress-track span { background: #39836c; }
+.registration-card .field label { color: #456258; font-size: 11px; font-weight: 700; }
+.registration-card .field input, .registration-card .field select { min-height: 44px; padding: 10px 11px; border-color: #d4dfd6; border-radius: 7px; color: #24433c; font-size: 12px; }
+.registration-card .field input::placeholder { color: #93a69b; }
+.registration-card .field input:focus, .registration-card .field select:focus { border-color: #39836c; box-shadow: 0 0 0 3px rgba(34, 109, 91, .12); }
+.registration-card .field input[aria-invalid='true'], .registration-card .field select[aria-invalid='true'] { border-color: #c65b48; }
+.registration-card .password-field input { padding-right: 68px; }
+.registration-card .primary-button, .registration-card .secondary-button { min-height: 44px; border-radius: 7px; font-size: 12px; }
+.registration-card .primary-button { color: #fff; background: #226d5b; }
+.registration-card .primary-button:hover:not(:disabled) { background: #195a4a; }
+.registration-card .secondary-button { color: #226d5b; background: #e8f3eb; }
+.registration-card .secondary-button:hover { background: #d9eee5; }
+.registration-card .back-button, .registration-card .text-link, .registration-card .visibility-button { color: #226d5b; font-weight: 700; }
+.registration-card .back-button:hover, .registration-card .text-link:hover { color: #195a4a; }
+.registration-card .privacy-note { color: #82938a; }
+.registration-card .tenant-id { border-color: #d4dfd6; border-radius: 9px; }
+.registration-card .tenant-id strong { color: #226d5b; }
