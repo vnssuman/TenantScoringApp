@@ -27,8 +27,7 @@ public sealed record PropertyManagementRequest(
 	[property: JsonPropertyName("address")] string Address,
 	[property: JsonPropertyName("city")] string City,
 	[property: JsonPropertyName("state")] string State,
-	[property: JsonPropertyName("monthly_rent")] decimal MonthlyRent,
-	[property: JsonPropertyName("is_vacant")] bool IsVacant);
+	[property: JsonPropertyName("monthly_rent")] decimal MonthlyRent);
 public sealed record PropertyManagementResponse(
 	[property: JsonPropertyName("id")] Guid Id,
 	[property: JsonPropertyName("property_name")] string PropertyName,

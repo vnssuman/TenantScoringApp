@@ -234,8 +234,6 @@ button { cursor: pointer; }
 .property-field input, .property-field select, .property-field textarea { width: 100%; min-height: 42px; padding: 10px 11px; border: 1px solid #d4dfd6; border-radius: 7px; outline: none; color: #24433c; background: #fff; font-size: 12px; font-weight: 400; }
 .property-field textarea { min-height: 82px; resize: vertical; }
 .property-field input:focus, .property-field select:focus, .property-field textarea:focus { border-color: #39836c; box-shadow: 0 0 0 3px rgba(34, 109, 91, .12); }
-.property-vacancy-toggle { display: flex; grid-column: 1 / -1; align-items: center; gap: 9px; color: #456258; font-size: 12px; }
-.property-vacancy-toggle input { width: 17px; height: 17px; accent-color: #226d5b; }
 .property-form-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 6px; }
 .profile-completion-page { min-width: 0; min-height: calc(100vh - 86px); padding-top: 18px; padding-bottom: 32px; }
 .profile-completion-header { margin-bottom: 8px; }

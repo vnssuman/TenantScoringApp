@@ -153,15 +153,13 @@ public sealed class Property
         CreatedAt = DateTime.UtcNow;
     }
 
-    public Property(Guid ownerId, string propertyName, string propertyType, string address, string city, string state, decimal monthlyRent, bool isVacant)
+    public Property(Guid ownerId, string propertyName, string propertyType, string address, string city, string state, decimal monthlyRent)
         : this(ownerId, null, propertyName, FormatLocation(address, city, state), monthlyRent, 0)
     {
         PropertyType = propertyType;
         Address = address;
         City = city;
         State = state;
-        IsVacant = isVacant;
-        Status = isVacant ? "Available" : "Leased";
     }
 
     public Guid PropertyId { get; private set; }
@@ -182,7 +180,9 @@ public sealed class Property
     public OwnerBankAccount? BankAccount { get; private set; }
     public ICollection<Lease> Leases { get; private set; } = new List<Lease>();
 
-    public void UpdateDetails(string propertyName, string propertyType, string address, string city, string state, decimal monthlyRent, bool isVacant)
+    public bool HasLiveLeaseOn(DateTime date) => Leases.Any(lease => lease.IsLiveOn(date));
+
+    public void UpdateDetails(string propertyName, string propertyType, string address, string city, string state, decimal monthlyRent)
     {
         PropertyName = propertyName;
         PropertyType = propertyType;
@@ -191,8 +191,6 @@ public sealed class Property
         State = state;
         Location = FormatLocation(address, city, state);
         RentAmount = monthlyRent;
-        IsVacant = isVacant;
-        if (Status is "Available" or "Leased") Status = isVacant ? "Available" : "Leased";
     }
 
     public void SetStatus(string status)
@@ -266,6 +264,11 @@ public sealed class Lease
     public User Owner { get; private set; } = null!;
     public ICollection<RentPayment> Payments { get; private set; } = new List<RentPayment>();
     public ICollection<OwnerFeedback> Feedback { get; private set; } = new List<OwnerFeedback>();
+
+    public bool IsLiveOn(DateTime date) =>
+        Status is "Active" or "CancellationRequested"
+        && (StartDate is null || StartDate.Value.Date <= date.Date)
+        && (EndDate is null || EndDate.Value.Date >= date.Date);
 
     public void Accept() { Status = "Active"; StartDate ??= DateTime.UtcNow; }
     public void SetRentalTerms(DateTime startDate, DateTime endDate, string? agreementDocumentUrl)

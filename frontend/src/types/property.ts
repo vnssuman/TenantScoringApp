@@ -11,4 +11,4 @@ export interface PropertyRecord {
   is_vacant: boolean;
 }
 
-export type PropertyInput = Omit<PropertyRecord, 'id'>;
+export type PropertyInput = Omit<PropertyRecord, 'id' | 'is_vacant'>;

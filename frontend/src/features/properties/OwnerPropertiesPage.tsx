@@ -11,7 +11,6 @@ const emptyForm: PropertyInput = {
   city: '',
   state: '',
   monthly_rent: 0,
-  is_vacant: true,
 };
 
 export function OwnerPropertiesPage({ onBack }: { onBack: () => void }): ReactElement {
@@ -59,7 +58,6 @@ export function OwnerPropertiesPage({ onBack }: { onBack: () => void }): ReactEl
       city: property.city,
       state: property.state,
       monthly_rent: property.monthly_rent,
-      is_vacant: property.is_vacant,
     });
     setError('');
     setIsFormOpen(true);
@@ -105,7 +103,7 @@ export function OwnerPropertiesPage({ onBack }: { onBack: () => void }): ReactEl
             <label className="property-field">City<input required value={formData.city} onChange={(event) => setFormData({ ...formData, city: event.target.value })} /></label>
             <label className="property-field">State<input required value={formData.state} onChange={(event) => setFormData({ ...formData, state: event.target.value })} /></label>
             <label className="property-field property-field-full">Monthly rent (₹)<input required type="number" min="1" step="1" value={formData.monthly_rent || ''} onChange={(event) => setFormData({ ...formData, monthly_rent: Number(event.target.value) })} /></label>
-            <label className="property-vacancy-toggle"><input type="checkbox" checked={formData.is_vacant} onChange={(event) => setFormData({ ...formData, is_vacant: event.target.checked })} /><span>Property is vacant</span></label>
+            {selectedProperty && <div className="property-field property-field-full"><span>Occupancy status</span><strong className={`property-vacancy ${selectedProperty.is_vacant ? 'vacant' : 'occupied'}`}>{selectedProperty.is_vacant ? 'Vacant' : 'Occupied'}</strong></div>}
             {error && <p className="properties-error property-field-full" role="alert">{error}</p>}
             <footer className="property-form-actions property-field-full">
               <button className="property-cancel-button" type="button" onClick={closeForm}>Cancel</button>

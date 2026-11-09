@@ -243,7 +243,7 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
         var user = await repository.FindUserAsync(userId, cancellationToken);
         if (user is null || user.CurrentRole is not ("Owner" or "Both") || !ValidPropertyRequest(request)) return null;
 
-        var property = new Property(userId, request.PropertyName.Trim(), request.PropertyType, request.Address.Trim(), request.City.Trim(), request.State.Trim(), request.MonthlyRent, request.IsVacant);
+        var property = new Property(userId, request.PropertyName.Trim(), request.PropertyType, request.Address.Trim(), request.City.Trim(), request.State.Trim(), request.MonthlyRent);
         await repository.AddPropertyAsync(property, cancellationToken);
         return ToPropertyManagement(property);
     }
@@ -254,7 +254,7 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
         var property = await repository.FindPropertyAsync(propertyId, cancellationToken);
         if (user is null || user.CurrentRole is not ("Owner" or "Both") || property is null || property.OwnerId != userId || !ValidPropertyRequest(request)) return null;
 
-        property.UpdateDetails(request.PropertyName.Trim(), request.PropertyType, request.Address.Trim(), request.City.Trim(), request.State.Trim(), request.MonthlyRent, request.IsVacant);
+        property.UpdateDetails(request.PropertyName.Trim(), request.PropertyType, request.Address.Trim(), request.City.Trim(), request.State.Trim(), request.MonthlyRent);
         await repository.SaveChangesAsync(cancellationToken);
         return ToPropertyManagement(property);
     }
@@ -309,7 +309,7 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
         var tenant = await repository.FindUserAsync(tenantId, cancellationToken);
         var property = await repository.FindPropertyAsync(propertyId, cancellationToken);
         if (owner is null || owner.CurrentRole is not ("Owner" or "Both") || tenant is null || tenant.CurrentRole is not ("Tenant" or "Both") || tenant.Profile is null
-            || property is null || property.OwnerId != ownerId || !property.IsVacant || rentAmount <= 0 || startDate.Date < DateTime.UtcNow.Date || endDate.Date <= startDate.Date) return null;
+            || property is null || property.OwnerId != ownerId || property.HasLiveLeaseOn(DateTime.UtcNow) || rentAmount <= 0 || startDate.Date < DateTime.UtcNow.Date || endDate.Date <= startDate.Date) return null;
 
         var lease = new Lease(property.PropertyId, tenantId, ownerId, rentAmount, property.AdvanceAmount);
         lease.SetRentalTerms(startDate, endDate, documentPath);
@@ -449,7 +449,7 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
 
     private static bool ValidScore(ScoreRequest request) => new[] { request.CreditScore, request.PaymentHistory, request.OwnerFeedback }.All(value => value is >= 0 and <= 100);
     private static PropertyResponse ToProperty(Property property) => new(property.PropertyId, property.PropertyName, property.Location, property.RentAmount, property.AdvanceAmount, property.Status, property.BankAccountId);
-    private static PropertyManagementResponse ToPropertyManagement(Property property) => new(property.PropertyId, property.PropertyName, property.PropertyType, property.Address, property.City, property.State, property.RentAmount, property.IsVacant);
+    private static PropertyManagementResponse ToPropertyManagement(Property property) => new(property.PropertyId, property.PropertyName, property.PropertyType, property.Address, property.City, property.State, property.RentAmount, !property.HasLiveLeaseOn(DateTime.UtcNow));
     private static RentalRequestResponse ToRentalRequest(Lease lease) => new(lease.LeaseId, lease.PropertyId, lease.Property.PropertyName, lease.Property.Location, lease.TenantId, lease.Tenant.Profile!.ProfileCode, string.Join(" ", new[] { lease.Tenant.Profile.FirstName, lease.Tenant.Profile.LastName }.Where(name => !string.IsNullOrWhiteSpace(name))), lease.AgreedRent, lease.StartDate, lease.EndDate, lease.Status, !string.IsNullOrWhiteSpace(lease.AgreementDocumentUrl));
     private static bool ValidPropertyRequest(PropertyManagementRequest request) =>
         !string.IsNullOrWhiteSpace(request.PropertyName) && request.PropertyName.Trim().Length <= 150

@@ -44,8 +44,8 @@ public sealed class KirayeeRepository(TenantDbContext dbContext) : IKirayeeRepos
     public async Task AddBankAccountAsync(OwnerBankAccount account, CancellationToken cancellationToken) { await dbContext.OwnerBankAccounts.AddAsync(account, cancellationToken); await dbContext.SaveChangesAsync(cancellationToken); }
     public async Task<IReadOnlyList<OwnerBankAccount>> GetBankAccountsAsync(Guid ownerId, CancellationToken cancellationToken) => await dbContext.OwnerBankAccounts.AsNoTracking().Where(account => account.OwnerId == ownerId && account.IsActive).ToListAsync(cancellationToken);
     public async Task AddPropertyAsync(Property property, CancellationToken cancellationToken) { await dbContext.Properties.AddAsync(property, cancellationToken); await dbContext.SaveChangesAsync(cancellationToken); }
-    public async Task<IReadOnlyList<Property>> GetPropertiesAsync(Guid? ownerId, CancellationToken cancellationToken) => await dbContext.Properties.AsNoTracking().Where(property => ownerId == null || property.OwnerId == ownerId).ToListAsync(cancellationToken);
-    public Task<Property?> FindPropertyAsync(Guid propertyId, CancellationToken cancellationToken) => dbContext.Properties.SingleOrDefaultAsync(property => property.PropertyId == propertyId, cancellationToken);
+    public async Task<IReadOnlyList<Property>> GetPropertiesAsync(Guid? ownerId, CancellationToken cancellationToken) => await dbContext.Properties.AsNoTracking().Include(property => property.Leases).Where(property => ownerId == null || property.OwnerId == ownerId).ToListAsync(cancellationToken);
+    public Task<Property?> FindPropertyAsync(Guid propertyId, CancellationToken cancellationToken) => dbContext.Properties.Include(property => property.Leases).SingleOrDefaultAsync(property => property.PropertyId == propertyId, cancellationToken);
     public async Task<IReadOnlyList<User>> SearchTenantsAsync(string query, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(query) || !query.All(character => character is >= '0' and <= '9')) return [];
