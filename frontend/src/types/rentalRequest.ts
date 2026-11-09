@@ -1,6 +1,6 @@
 export interface TenantLookupResult {
   tenantId: string;
-  profileCode: string;
+  mobileNumber: string;
   fullName: string;
 }
 

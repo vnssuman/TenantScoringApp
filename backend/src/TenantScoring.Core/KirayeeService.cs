@@ -264,7 +264,7 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
         var owner = await repository.FindUserAsync(ownerId, cancellationToken);
         if (owner is null || owner.CurrentRole is not ("Owner" or "Both")) return null;
         var tenants = await repository.SearchTenantsAsync(query.Trim(), cancellationToken);
-        return tenants.Select(user => new TenantLookupResponse(user.UserId, user.Profile!.ProfileCode, string.Join(" ", new[] { user.Profile.FirstName, user.Profile.LastName }.Where(name => !string.IsNullOrWhiteSpace(name))))).ToArray();
+        return tenants.Select(user => new TenantLookupResponse(user.UserId, user.MobileNumber, string.Join(" ", new[] { user.Profile!.FirstName, user.Profile.LastName }.Where(name => !string.IsNullOrWhiteSpace(name))))).ToArray();
     }
 
     public async Task<IReadOnlyList<RentalRequestResponse>?> GetOwnerRentalRequestsAsync(Guid ownerId, string? status, CancellationToken cancellationToken = default)

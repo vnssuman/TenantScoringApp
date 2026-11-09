@@ -48,28 +48,11 @@ public sealed class KirayeeRepository(TenantDbContext dbContext) : IKirayeeRepos
     public Task<Property?> FindPropertyAsync(Guid propertyId, CancellationToken cancellationToken) => dbContext.Properties.SingleOrDefaultAsync(property => property.PropertyId == propertyId, cancellationToken);
     public async Task<IReadOnlyList<User>> SearchTenantsAsync(string query, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(query)) return [];
+        if (string.IsNullOrWhiteSpace(query) || !query.All(character => character is >= '0' and <= '9')) return [];
         var users = dbContext.Users.AsNoTracking().Include(user => user.Profile)
-            .Where(user => user.CurrentRole == "Tenant" || user.CurrentRole == "Both");
-        if (Guid.TryParse(query, out var userId))
-        {
-            return await users.Where(user => user.UserId == userId || user.Profile!.ProfileId == userId).Take(10).ToListAsync(cancellationToken);
-        }
-        if (query.StartsWith("KID", StringComparison.OrdinalIgnoreCase))
-        {
-            var profilePrefix = query[3..].Trim().ToUpperInvariant();
-            if (profilePrefix.Length is > 0 and <= 10 && profilePrefix.All(character => character is >= '0' and <= '9'))
-            {
-                var storedCodePrefix = $"KID{profilePrefix}";
-                return await users.Where(user => user.Profile != null && user.Profile.ProfileCode.StartsWith(storedCodePrefix))
-                    .Take(10).ToListAsync(cancellationToken);
-            }
-        }
-        return await users.Where(user => user.Profile != null
-                && ((user.Profile.FirstName ?? "").Contains(query)
-                    || (user.Profile.LastName ?? "").Contains(query)
-                    || ((user.Profile.FirstName ?? "") + " " + (user.Profile.LastName ?? "")).Contains(query)))
-            .OrderBy(user => user.Profile!.FirstName).Take(10).ToListAsync(cancellationToken);
+            .Where(user => (user.CurrentRole == "Tenant" || user.CurrentRole == "Both") && user.Profile != null);
+        return await users.Where(user => user.MobileNumber.StartsWith(query))
+            .OrderBy(user => user.MobileNumber).Take(10).ToListAsync(cancellationToken);
     }
     public async Task<IReadOnlyList<Lease>> GetOwnerLeasesAsync(Guid ownerId, string? status, CancellationToken cancellationToken)
     {

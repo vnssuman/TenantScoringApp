@@ -40,7 +40,7 @@ public sealed record PropertyManagementResponse(
 	[property: JsonPropertyName("is_vacant")] bool IsVacant);
 public sealed record LeaseRequest(Guid PropertyId, decimal? AgreedRent, decimal? AgreedAdvance);
 public sealed record LeaseResponse(Guid LeaseId, Guid PropertyId, Guid TenantId, Guid OwnerId, decimal AgreedRent, decimal AgreedAdvance, string Status, DateTime? StartDate);
-public sealed record TenantLookupResponse(Guid TenantId, string ProfileCode, string FullName);
+public sealed record TenantLookupResponse(Guid TenantId, string MobileNumber, string FullName);
 public sealed record RentalRequestResponse(Guid LeaseId, Guid PropertyId, string PropertyName, string Location, Guid TenantId, string ProfileCode, string TenantName, decimal AgreedRent, DateTime? StartDate, DateTime? EndDate, string Status, bool HasAgreementDocument);
 public sealed record TenantRentalRequestResponse(Guid LeaseId, string OwnerName, string PropertyName, string PropertyType, string Address, string City, string State, decimal AgreedRent, decimal AgreedAdvance, DateTime? StartDate, DateTime? EndDate, DateTime CreatedAt, string Status, bool HasAgreementDocument);
 public sealed record PaymentRequest(decimal Amount, string TransactionReference);
