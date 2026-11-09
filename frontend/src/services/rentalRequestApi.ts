@@ -1,4 +1,4 @@
-import type { RentalRequestInput, RentalRequestRecord, TenantLookupResult, TenantPaymentPropertyRecord, TenantRentalRequestRecord } from '../types/rentalRequest';
+import type { RentalAgreementTerms, RentalRequestInput, RentalRequestRecord, TenantLookupResult, TenantPaymentPropertyRecord, TenantRentalRequestRecord } from '../types/rentalRequest';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
@@ -72,21 +72,18 @@ export function searchTenants(query: string): Promise<TenantLookupResult[]> {
 }
 
 export function sendRentalRequest(input: RentalRequestInput): Promise<RentalRequestRecord> {
-  const form = new FormData();
-  form.set('propertyId', input.propertyId);
-  form.set('tenantId', input.tenantId);
-  form.set('rentAmount', String(input.rentAmount));
-  form.set('startDate', input.startDate);
-  form.set('endDate', input.endDate);
-  if (input.agreementDocument) form.set('agreementDocument', input.agreementDocument);
-  return request<RentalRequestRecord>('/api/rental-requests', { method: 'POST', body: form });
+  return request<RentalRequestRecord>('/api/leases/send-request', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
 }
 
 export function withdrawRentalRequest(leaseId: string): Promise<void> {
   return request<void>(`/api/kirayee/leases/${encodeURIComponent(leaseId)}/withdraw`, { method: 'POST' });
 }
 
-export function updateSentBackRentalRequest(leaseId: string, input: Pick<RentalRequestInput, 'rentAmount' | 'startDate' | 'endDate'>): Promise<RentalRequestRecord> {
+export function updateSentBackRentalRequest(leaseId: string, input: RentalAgreementTerms): Promise<RentalRequestRecord> {
   return request<RentalRequestRecord>(`/api/rental-requests/${encodeURIComponent(leaseId)}/resubmit`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

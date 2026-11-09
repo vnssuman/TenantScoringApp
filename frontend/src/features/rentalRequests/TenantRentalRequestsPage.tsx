@@ -100,7 +100,7 @@ export function TenantRentalRequestsPage({ onBack }: { onBack: () => void }): Re
                   </dl>
                   {request.tenantComments && <p className="rental-request-comments"><strong>Your comments:</strong> {request.tenantComments}</p>}
                   <footer className="tenant-request-actions">
-                    {request.hasAgreementDocument && <button className="tenant-request-document" type="button" onClick={() => { void downloadRentalAgreement(request.leaseId).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Agreement document could not be opened.')); }}><FileText size={15} /> View agreement</button>}
+                    {request.hasAgreementDocument && <button className="tenant-request-document" type="button" onClick={() => { void downloadRentalAgreement(request.leaseId).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Agreement document could not be opened.')); }}><FileText size={15} /> Download agreement PDF</button>}
                     {request.status === 'Pending' && <div className="tenant-request-response-actions">
                       <button className="mapping-secondary-button" type="button" onClick={() => { setComments(''); setSelectedAction({ request, action: 'send-back' }); }}><CornerUpLeft size={15} /> Send back</button>
                       <button className="mapping-primary-button" type="button" onClick={() => setSelectedAction({ request, action: 'accept' })}><Check size={15} /> Accept</button>

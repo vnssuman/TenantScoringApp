@@ -96,6 +96,23 @@ public sealed class PropertyManagementTests
     }
 
     [Fact]
+    public void ResentAgreementStoresRevisedTermsAndDocument()
+    {
+        var lease = new Lease(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 20000, 10000);
+        lease.SetRentalTerms(DateTime.Today.AddDays(1), DateTime.Today.AddMonths(12), "old.pdf");
+        lease.SendBack("Please change the rent.");
+        lease.UpdateSentBackRequest(22000, DateTime.Today.AddDays(2), DateTime.Today.AddMonths(13));
+        lease.SetAgreementDetails(15000, "Owner address", "Unit 2", DateTime.Today, "new.pdf");
+
+        Assert.Equal("Pending", lease.Status);
+        Assert.Equal(22000, lease.AgreedRent);
+        Assert.Equal(15000, lease.AgreedAdvance);
+        Assert.Equal("new.pdf", lease.AgreementDocumentUrl);
+        Assert.Equal("Owner address", lease.AgreementOwnerAddress);
+        Assert.Equal("Unit 2", lease.AgreementUnitNumber);
+    }
+
+    [Fact]
     public void OwnerCanEditAndResendSentBackRentalRequest()
     {
         var lease = new Lease(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 20000, 0);

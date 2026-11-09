@@ -393,6 +393,17 @@ namespace TenantScoring.Data.Migrations
                     b.Property<string>("AgreementDocumentUrl")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("AgreementOwnerAddress")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateTime?>("AgreementSigningDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("AgreementUnitNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 

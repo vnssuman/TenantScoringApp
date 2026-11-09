@@ -257,6 +257,9 @@ public sealed class Lease
     public string Status { get; private set; } = "Pending";
     public string? TenantComments { get; private set; }
     public string? AgreementDocumentUrl { get; private set; }
+    public string? AgreementOwnerAddress { get; private set; }
+    public string? AgreementUnitNumber { get; private set; }
+    public DateTime? AgreementSigningDate { get; private set; }
     public DateTime? StartDate { get; private set; }
     public DateTime? EndDate { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -277,6 +280,14 @@ public sealed class Lease
         StartDate = startDate;
         EndDate = endDate;
         AgreementDocumentUrl = agreementDocumentUrl;
+    }
+    public void SetAgreementDetails(decimal advance, string ownerAddress, string unitNumber, DateTime signingDate, string documentPath)
+    {
+        AgreedAdvance = advance;
+        AgreementOwnerAddress = ownerAddress;
+        AgreementUnitNumber = unitNumber;
+        AgreementSigningDate = signingDate;
+        AgreementDocumentUrl = documentPath;
     }
     public void SendBack(string comments)
     {

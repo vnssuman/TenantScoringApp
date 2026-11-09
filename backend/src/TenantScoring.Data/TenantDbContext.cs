@@ -126,6 +126,8 @@ public sealed class TenantDbContext(DbContextOptions<TenantDbContext> options) :
         score.HasOne(item => item.Tenant).WithMany().HasForeignKey(item => item.TenantId).OnDelete(DeleteBehavior.Restrict);
 
         var lease = modelBuilder.Entity<Lease>();
+        lease.Property(item => item.AgreementOwnerAddress).HasMaxLength(512);
+        lease.Property(item => item.AgreementUnitNumber).HasMaxLength(100);
         lease.ToTable("Leases");
         lease.HasKey(item => item.LeaseId);
         lease.Property(item => item.AgreedRent).HasPrecision(18, 2);

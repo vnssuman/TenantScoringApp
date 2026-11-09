@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\TenantScoring.Core\TenantScoring.Core.csproj" />
+    <ProjectReference Include="..\..\src\TenantScoring.Data\TenantScoring.Data.csproj" />
     <ProjectReference Include="..\..\src\TenantScoring.Models\TenantScoring.Models.csproj" />
   </ItemGroup>
   <ItemGroup>

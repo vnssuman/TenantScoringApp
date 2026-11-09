@@ -40,10 +40,11 @@ public sealed record PropertyManagementResponse(
 public sealed record LeaseRequest(Guid PropertyId, decimal? AgreedRent, decimal? AgreedAdvance);
 public sealed record LeaseResponse(Guid LeaseId, Guid PropertyId, Guid TenantId, Guid OwnerId, decimal AgreedRent, decimal AgreedAdvance, string Status, DateTime? StartDate);
 public sealed record TenantLookupResponse(Guid TenantId, string MobileNumber, string FullName);
-public sealed record RentalRequestResponse(Guid LeaseId, Guid PropertyId, string PropertyName, string Location, Guid TenantId, string ProfileCode, string TenantName, decimal AgreedRent, DateTime? StartDate, DateTime? EndDate, string Status, string? TenantComments, bool HasAgreementDocument);
+public sealed record RentalRequestResponse(Guid LeaseId, Guid PropertyId, string PropertyName, string Location, Guid TenantId, string ProfileCode, string TenantName, decimal AgreedRent, DateTime? StartDate, DateTime? EndDate, string Status, string? TenantComments, bool HasAgreementDocument, decimal AgreedAdvance = 0, string? AgreementOwnerAddress = null, string? AgreementUnitNumber = null, DateTime? AgreementSigningDate = null);
 public sealed record TenantRentalRequestResponse(Guid LeaseId, string OwnerName, string PropertyName, string PropertyType, string Address, string City, string State, decimal AgreedRent, decimal AgreedAdvance, DateTime? StartDate, DateTime? EndDate, DateTime CreatedAt, string Status, string? TenantComments, bool HasAgreementDocument);
 public sealed record TenantRequestCommentRequest(string Comments);
-public sealed record TenantRentalRequestEditRequest(decimal RentAmount, DateTime StartDate, DateTime EndDate);
+public sealed record RentalAgreementTerms(decimal RentAmount, decimal AdvanceAmount, DateTime StartDate, DateTime EndDate, DateTime SigningDate, string OwnerAddress, string UnitNumber);
+public sealed record GeneratedRentalRequest(Guid PropertyId, Guid TenantId, RentalAgreementTerms Terms);
 public sealed record PaymentRequest(decimal Amount, string TransactionReference);
 public sealed record PaymentResponse(Guid PaymentId, decimal Amount, DateTime DueDate, DateTime? PaidDate, string Status, int RewardPointsEarned);
 public sealed record TenantRentPaymentRecord(Guid PaymentId, DateTime DueDate, DateTime? PaidDate, decimal Amount, string Status, int RewardPointsEarned);

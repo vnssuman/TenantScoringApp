@@ -25,6 +25,14 @@ builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IKirayeeRepository, KirayeeRepository>();
 builder.Services.AddScoped<IKirayeeService, KirayeeService>();
+builder.Services.AddSingleton<IRentalAgreementDocuments>(services =>
+{
+    var environment = services.GetRequiredService<IWebHostEnvironment>();
+    var configuration = services.GetRequiredService<IConfiguration>();
+    var fontPath = configuration["RentalAgreements:FontPath"]
+        ?? (OperatingSystem.IsWindows() ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arial.ttf") : "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
+    return new RentalAgreementDocuments(Path.Combine(environment.ContentRootPath, "App_Data", "RentalAgreements"), fontPath);
+});
 builder.Services.AddSingleton<IAuthenticationTokenStore, AuthenticationTokenStore>();
 
 var app = builder.Build();
@@ -311,15 +319,25 @@ app.MapPost("/api/rental-requests", async (HttpRequest request, IKirayeeService 
     return Results.Created($"/api/rental-requests/{created.LeaseId}", created);
 });
 
-app.MapPut("/api/rental-requests/{leaseId:guid}/resubmit", async (HttpRequest request, Guid leaseId, TenantRentalRequestEditRequest body, IKirayeeService service, CancellationToken cancellationToken) =>
+app.MapPost("/api/leases/send-request", async (HttpRequest request, GeneratedRentalRequest body, IKirayeeService service, CancellationToken cancellationToken) =>
+{
+    var ownerId = GetUserId(request);
+    if (ownerId is null) return Results.Unauthorized();
+    var created = await service.CreateGeneratedRentalRequestAsync(ownerId.Value, body, cancellationToken);
+    return created is null
+        ? Results.BadRequest(new { message = "Check the property, tenant, profile names, contact details, agreement details and rental dates." })
+        : Results.Created($"/api/rental-requests/{created.LeaseId}", created);
+});
+
+app.MapPut("/api/rental-requests/{leaseId:guid}/resubmit", async (HttpRequest request, Guid leaseId, RentalAgreementTerms body, IKirayeeService service, CancellationToken cancellationToken) =>
 {
     var ownerId = GetUserId(request);
     if (ownerId is null) return Results.Unauthorized();
     var profile = await service.GetProfileAsync(ownerId.Value, cancellationToken);
     if (profile is null) return Results.NotFound();
     if (profile.CurrentRole is not ("Owner" or "Both")) return Results.Forbid();
-    var updated = await service.UpdateSentBackRentalRequestAsync(ownerId.Value, leaseId, body.RentAmount, body.StartDate, body.EndDate, cancellationToken);
-    return updated is null ? Results.BadRequest(new { message = "Only a sent-back request with valid rent and dates can be edited." }) : Results.Ok(updated);
+    var updated = await service.UpdateSentBackRentalRequestAsync(ownerId.Value, leaseId, body, cancellationToken);
+    return updated is null ? Results.BadRequest(new { message = "Only a sent-back request with valid agreement details can be edited. Check both profiles include names and contact details." }) : Results.Ok(updated);
 });
 
 app.MapGet("/api/rental-requests/{leaseId:guid}/document", async (HttpRequest request, Guid leaseId, IKirayeeService service, CancellationToken cancellationToken) =>

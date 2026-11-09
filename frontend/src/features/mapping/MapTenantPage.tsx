@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
-import { ArrowLeft, FileText, MapPin, Paperclip, Pencil, Plane, UserRound, Wallet, XCircle } from 'lucide-react';
+import { ArrowLeft, FileText, MapPin, Pencil, Plane, UserRound, Wallet, XCircle } from 'lucide-react';
 import { getProperties } from '../../services/propertyApi';
 import { downloadRentalAgreement, getRentalRequests, respondToRentalRequest, searchTenants, sendRentalRequest, updateSentBackRentalRequest, withdrawRentalRequest } from '../../services/rentalRequestApi';
 import { getCurrentProfile } from '../../services/profileApi';
@@ -26,9 +26,12 @@ export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement 
   const [tenantResults, setTenantResults] = useState<TenantLookupResult[]>([]);
   const [selectedTenant, setSelectedTenant] = useState<TenantLookupResult | null>(null);
   const [rentAmount, setRentAmount] = useState('');
+  const [advanceAmount, setAdvanceAmount] = useState('0');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [agreementDocument, setAgreementDocument] = useState<File | undefined>();
+  const [signingDate, setSigningDate] = useState('');
+  const [ownerAddress, setOwnerAddress] = useState('');
+  const [unitNumber, setUnitNumber] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -89,7 +92,10 @@ export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement 
     setRentAmount('');
     setStartDate('');
     setEndDate('');
-    setAgreementDocument(undefined);
+    setAdvanceAmount('0');
+    setSigningDate('');
+    setOwnerAddress('');
+    setUnitNumber('');
     setIsRequestOpen(true);
   }
 
@@ -97,8 +103,12 @@ export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement 
     setError('');
     setEditingRequest(request);
     setRentAmount(String(request.agreedRent));
+    setAdvanceAmount(String(request.agreedAdvance));
     setStartDate(request.startDate?.slice(0, 10) ?? '');
     setEndDate(request.endDate?.slice(0, 10) ?? '');
+    setSigningDate(request.agreementSigningDate?.slice(0, 10) ?? '');
+    setOwnerAddress(request.agreementOwnerAddress ?? '');
+    setUnitNumber(request.agreementUnitNumber ?? '');
     setIsRequestOpen(true);
   }
 
@@ -114,12 +124,9 @@ export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement 
     setSubmitting(true);
     setError('');
     try {
+      const terms = { rentAmount: Number(rentAmount), advanceAmount: Number(advanceAmount), startDate, endDate, signingDate, ownerAddress, unitNumber };
       if (editingRequest) {
-        await updateSentBackRentalRequest(editingRequest.leaseId, {
-          rentAmount: Number(rentAmount),
-          startDate,
-          endDate,
-        });
+        await updateSentBackRentalRequest(editingRequest.leaseId, terms);
         await refreshRequests();
         setActiveTab('sent');
         closeRequestFlow();
@@ -129,10 +136,7 @@ export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement 
       await sendRentalRequest({
         propertyId: selectedProperty.id,
         tenantId: selectedTenant.tenantId,
-        rentAmount: Number(rentAmount),
-        startDate,
-        endDate,
-        agreementDocument,
+        terms,
       });
       await refreshRequests();
       setActiveTab('sent');
@@ -186,10 +190,15 @@ export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement 
               <form className="mapping-step-content mapping-rental-form" onSubmit={submitRequest}>
                 <h3>{editingRequest.propertyName} · {editingRequest.tenantName}</h3>
                 <div className="mapping-field-grid">
-                  <label>Monthly rent<input required type="number" min="1" step="1" value={rentAmount} onChange={(event) => setRentAmount(event.target.value)} /></label>
+                  <label>Monthly rent<input required type="number" min="0.01" step="0.01" value={rentAmount} onChange={(event) => setRentAmount(event.target.value)} /></label>
+                  <label>Advance / security deposit<input required type="number" min="0" step="0.01" value={advanceAmount} onChange={(event) => setAdvanceAmount(event.target.value)} /></label>
                   <label>Start date<input required type="date" value={startDate} min={new Date().toISOString().slice(0, 10)} onChange={(event) => setStartDate(event.target.value)} /></label>
                   <label>End date<input required type="date" value={endDate} min={startDate || new Date().toISOString().slice(0, 10)} onChange={(event) => setEndDate(event.target.value)} /></label>
+                  <label>Proposed signing date<input required type="date" value={signingDate} onChange={(event) => setSigningDate(event.target.value)} /></label>
+                  <label>Unit number<input required maxLength={100} value={unitNumber} onChange={(event) => setUnitNumber(event.target.value)} /></label>
+                  <label>Owner permanent address<input required maxLength={512} value={ownerAddress} onChange={(event) => setOwnerAddress(event.target.value)} /></label>
                 </div>
+                <p className="feedback-intro">A new draft agreement will be generated with these terms. App acceptance is not a signature.</p>
                 {error && <p className="properties-error" role="alert">{error}</p>}
                 <div className="mapping-flow-actions"><button className="mapping-secondary-button" type="button" onClick={closeRequestFlow}>Cancel</button><button className="mapping-primary-button" type="submit" disabled={submitting}>{submitting ? 'Saving...' : 'Save and Resend'}</button></div>
               </form>
@@ -199,7 +208,21 @@ export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement 
             <div className="mapping-step-indicator" aria-hidden="true"><span className={step >= 1 ? 'current' : ''} /><span className={step >= 2 ? 'current' : ''} /><span className={step >= 3 ? 'current' : ''} /></div>
             {step === 1 && <section className="mapping-step-content"><h3>Select a vacant property</h3>{vacantProperties.length === 0 ? <div className="mapping-empty-inline">No vacant properties are available. Add a property or update its vacancy status first.</div> : <div className="mapping-property-options">{vacantProperties.map((property) => <button className={`mapping-property-option ${selectedProperty?.id === property.id ? 'selected' : ''}`} key={property.id} type="button" onClick={() => { setSelectedProperty(property); setRentAmount(String(property.monthly_rent)); }}><strong>{property.property_name}</strong><span>{property.address}, {property.city}, {property.state}</span><small>{formatCurrency(property.monthly_rent)} / month</small></button>)}</div>}<div className="mapping-flow-actions"><button className="mapping-primary-button" type="button" disabled={!selectedProperty} onClick={() => { setError(''); setStep(2); }}>Continue</button></div></section>}
             {step === 2 && <section className="mapping-step-content"><h3>Find a tenant</h3>{selectedTenant ? <div className="mapping-selected-tenant"><UserRound size={18} /><span><strong>{selectedTenant.fullName}</strong><small>Mobile {selectedTenant.mobileNumber}</small></span><button type="button" aria-label="Remove selected tenant" onClick={() => { setSelectedTenant(null); setTenantQuery(''); }}>Change</button></div> : <div className="tenant-search-wrap"><input autoFocus type="tel" inputMode="numeric" value={tenantQuery} placeholder="Enter tenant mobile number" onChange={(event) => { setTenantQuery(event.target.value); setError(''); }} /><div className="tenant-search-results">{tenantQuery.trim().length >= 2 && /^\d+$/.test(tenantQuery.trim()) && tenantResults.length === 0 && <p>No matching tenants found.</p>}{tenantResults.map((tenant) => <button key={tenant.tenantId} type="button" onClick={() => { setSelectedTenant(tenant); setTenantQuery(tenant.mobileNumber); setError(''); }}><span>{tenant.fullName}</span><small>{tenant.mobileNumber}</small></button>)}</div></div>}<div className="mapping-flow-actions"><button className="mapping-secondary-button" type="button" onClick={() => setStep(1)}>Back</button><button className="mapping-primary-button" type="button" disabled={!selectedTenant} onClick={() => setStep(3)}>Continue</button></div></section>}
-            {step === 3 && <form className="mapping-step-content mapping-rental-form" onSubmit={submitRequest}><h3>Rental details</h3><div className="mapping-field-grid"><label>Monthly rent<input required type="number" min="1" step="1" value={rentAmount} onChange={(event) => setRentAmount(event.target.value)} placeholder={String(selectedProperty?.monthly_rent ?? '')} /></label><label>Start date<input required type="date" value={startDate} min={new Date().toISOString().slice(0, 10)} onChange={(event) => setStartDate(event.target.value)} /></label><label>End date<input required type="date" value={endDate} min={startDate || new Date().toISOString().slice(0, 10)} onChange={(event) => setEndDate(event.target.value)} /></label><label className="mapping-document-field">Agreement document (PDF, max 5 MB)<span className="mapping-file-control"><Paperclip size={15} /><input type="file" accept="application/pdf,.pdf" onChange={(event) => setAgreementDocument(event.target.files?.[0])} /></span>{agreementDocument && <small>{agreementDocument.name}</small>}</label></div>{error && <p className="properties-error" role="alert">{error}</p>}<div className="mapping-flow-actions"><button className="mapping-secondary-button" type="button" onClick={() => setStep(2)}>Back</button><button className="mapping-primary-button" type="submit" disabled={submitting}>{submitting ? 'Sending...' : 'Send Request'}</button></div></form>}
+            {step === 3 && <form className="mapping-step-content mapping-rental-form" onSubmit={submitRequest}>
+              <h3>Rental details</h3>
+              <div className="mapping-field-grid">
+                <label>Monthly rent<input required type="number" min="0.01" step="0.01" value={rentAmount} onChange={(event) => setRentAmount(event.target.value)} /></label>
+                <label>Advance / security deposit<input required type="number" min="0" step="0.01" value={advanceAmount} onChange={(event) => setAdvanceAmount(event.target.value)} /></label>
+                <label>Start date<input required type="date" value={startDate} min={new Date().toISOString().slice(0, 10)} onChange={(event) => setStartDate(event.target.value)} /></label>
+                <label>End date<input required type="date" value={endDate} min={startDate || new Date().toISOString().slice(0, 10)} onChange={(event) => setEndDate(event.target.value)} /></label>
+                <label>Proposed signing date<input required type="date" value={signingDate} onChange={(event) => setSigningDate(event.target.value)} /></label>
+                <label>Unit number<input required maxLength={100} value={unitNumber} onChange={(event) => setUnitNumber(event.target.value)} /></label>
+                <label>Owner permanent address<input required maxLength={512} value={ownerAddress} onChange={(event) => setOwnerAddress(event.target.value)} /></label>
+              </div>
+              <p className="feedback-intro">A draft agreement will be generated from these details and the registered contact information. App acceptance is not a signature. Review the draft and applicable local requirements with a legal professional.</p>
+              {error && <p className="properties-error" role="alert">{error}</p>}
+              <div className="mapping-flow-actions"><button className="mapping-secondary-button" type="button" onClick={() => setStep(2)}>Back</button><button className="mapping-primary-button" type="submit" disabled={submitting}>{submitting ? 'Sending...' : 'Send Request'}</button></div>
+            </form>}
           </>}
         </section>
       ) : (
@@ -268,7 +291,7 @@ function RequestCard({ request, onDownload, onWithdraw, onEdit, onRequestCancell
       setWithdrawing(false);
     }
   }
-  return <article className="rental-request-card"><header className="rental-request-heading"><div><h2>{request.propertyName}</h2><p><MapPin size={14} />{request.location}</p></div><span className={`rental-request-status ${request.status.toLowerCase()}`}>{request.status === 'SentBack' ? 'Sent Back' : request.status === 'OwnerCancellationRequested' ? 'Cancellation Pending Tenant' : request.status}</span></header><div className="rental-request-metadata"><div><span>Profile ID</span><strong className="mapping-profile-id">{request.profileCode}</strong></div><div><span>Monthly Rent</span><strong>{formatCurrency(request.agreedRent)}</strong></div><div><span>Start Date</span><strong>{formatDate(request.startDate)}</strong></div><div><span>End Date</span><strong>{formatDate(request.endDate)}</strong></div></div>{request.tenantComments && <p className="rental-request-comments"><strong>Tenant comments:</strong> {request.tenantComments}</p>}{(request.hasAgreementDocument || onWithdraw || onEdit || onRequestCancellation) && <footer className="rental-request-footer">{request.hasAgreementDocument && <button type="button" onClick={() => { setDownloadError(''); void onDownload().catch((reason: unknown) => setDownloadError(reason instanceof Error ? reason.message : 'Document download failed.')); }}><FileText size={16} />Mock Agreement Document - Standard Rental Agreement.pdf</button>}{downloadError && <small role="alert">{downloadError}</small>}{withdrawError && <small role="alert">{withdrawError}</small>}{(onEdit || onWithdraw || onRequestCancellation) && <div className="mapping-request-actions">{onEdit && <button className="mapping-edit-request-button" type="button" onClick={onEdit}><Pencil size={14} />Edit and resend</button>}{onWithdraw && <button className="mapping-withdraw-button" type="button" disabled={withdrawing} onClick={() => { setWithdrawError(''); setIsWithdrawModalOpen(true); }}>Withdraw request</button>}{onRequestCancellation && <button className="mapping-withdraw-button" type="button" onClick={onRequestCancellation}><XCircle size={14} />Request tenancy cancellation</button>}</div>}</footer>}
+  return <article className="rental-request-card"><header className="rental-request-heading"><div><h2>{request.propertyName}</h2><p><MapPin size={14} />{request.location}</p></div><span className={`rental-request-status ${request.status.toLowerCase()}`}>{request.status === 'SentBack' ? 'Sent Back' : request.status === 'OwnerCancellationRequested' ? 'Cancellation Pending Tenant' : request.status}</span></header><div className="rental-request-metadata"><div><span>Profile ID</span><strong className="mapping-profile-id">{request.profileCode}</strong></div><div><span>Monthly Rent</span><strong>{formatCurrency(request.agreedRent)}</strong></div><div><span>Start Date</span><strong>{formatDate(request.startDate)}</strong></div><div><span>End Date</span><strong>{formatDate(request.endDate)}</strong></div></div>{request.tenantComments && <p className="rental-request-comments"><strong>Tenant comments:</strong> {request.tenantComments}</p>}{(request.hasAgreementDocument || onWithdraw || onEdit || onRequestCancellation) && <footer className="rental-request-footer">{request.hasAgreementDocument && <button type="button" onClick={() => { setDownloadError(''); void onDownload().catch((reason: unknown) => setDownloadError(reason instanceof Error ? reason.message : 'Document download failed.')); }}><FileText size={16} />Download agreement PDF</button>}{downloadError && <small role="alert">{downloadError}</small>}{withdrawError && <small role="alert">{withdrawError}</small>}{(onEdit || onWithdraw || onRequestCancellation) && <div className="mapping-request-actions">{onEdit && <button className="mapping-edit-request-button" type="button" onClick={onEdit}><Pencil size={14} />Edit and resend</button>}{onWithdraw && <button className="mapping-withdraw-button" type="button" disabled={withdrawing} onClick={() => { setWithdrawError(''); setIsWithdrawModalOpen(true); }}>Withdraw request</button>}{onRequestCancellation && <button className="mapping-withdraw-button" type="button" onClick={onRequestCancellation}><XCircle size={14} />Request tenancy cancellation</button>}</div>}</footer>}
     <ActionModal
       isOpen={isWithdrawModalOpen}
       title="Withdraw rental request?"

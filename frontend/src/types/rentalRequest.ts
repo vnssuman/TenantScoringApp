@@ -18,6 +18,10 @@ export interface RentalRequestRecord {
   status: string;
   tenantComments: string | null;
   hasAgreementDocument: boolean;
+  agreedAdvance: number;
+  agreementOwnerAddress: string | null;
+  agreementUnitNumber: string | null;
+  agreementSigningDate: string | null;
 }
 
 export interface TenantRentalRequestRecord {
@@ -62,8 +66,15 @@ export interface TenantPaymentPropertyRecord {
 export interface RentalRequestInput {
   propertyId: string;
   tenantId: string;
+  terms: RentalAgreementTerms;
+}
+
+export interface RentalAgreementTerms {
   rentAmount: number;
+  advanceAmount: number;
   startDate: string;
   endDate: string;
-  agreementDocument?: File;
+  signingDate: string;
+  ownerAddress: string;
+  unitNumber: string;
 }
