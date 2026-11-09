@@ -15,7 +15,6 @@ const ownerActions: Action[] = [
   { title: 'Map Tenant', description: 'Link tenants to your properties', linkText: 'Manage Mappings', path: '/owner/map-tenant', tone: 'green', icon: <UserCheck size={19} aria-hidden="true" /> },
   { title: 'Tenant Score', description: 'View tenant credit and profile scores', linkText: 'Check Scores', path: '/owner/tenant-scores', tone: 'purple', icon: <TrendingUp size={19} aria-hidden="true" /> },
   { title: 'Add Property', description: 'Register your property for tenant mapping', linkText: 'Manage Properties', path: '/owner/add-property', tone: 'blue', icon: <Building2 size={19} aria-hidden="true" /> },
-  { title: 'Tenant Feedback', description: 'Rate and review your current tenants', linkText: 'Give Feedback', path: '/owner/feedback', tone: 'gold', icon: <MessageSquare size={19} aria-hidden="true" /> },
 ];
 
 const tenantActions: Action[] = [
@@ -24,12 +23,14 @@ const tenantActions: Action[] = [
   { title: 'Rental History', description: 'View past & current properties', linkText: 'View History', path: '/tenant/rental-history', tone: 'purple', icon: <History size={19} aria-hidden="true" /> },
 ];
 
+const feedbackAction: Action = { title: 'Move-out Feedback', description: 'View feedback history or rate former owners and tenants', linkText: 'View Feedback', path: '/feedback', tone: 'gold', icon: <MessageSquare size={19} aria-hidden="true" /> };
+
 export function ExplorerActionsGrid({ role }: { role: ProfileRole }): ReactElement {
   const actions = role === 'owner'
-    ? ownerActions
+    ? [...ownerActions, feedbackAction]
     : role === 'tenant'
-      ? tenantActions
-      : [...ownerActions, ...tenantActions];
+      ? [...tenantActions, feedbackAction]
+      : [...ownerActions, ...tenantActions, feedbackAction];
   const title = role === 'both' ? 'Owner and Tenant Actions' : role === 'owner' ? 'Owner Actions' : 'Tenant Actions';
 
   return (

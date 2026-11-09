@@ -22,7 +22,7 @@ namespace TenantScoring.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.HasSequence<long>("ProfileCodeSequence", "dbo")
+            modelBuilder.HasSequence("ProfileCodeSequence", "dbo")
                 .StartsAt(1000000000L);
 
             modelBuilder.Entity("TenantScoring.Models.BehavioralQuestion", b =>
@@ -84,6 +84,296 @@ namespace TenantScoring.Data.Migrations
                             QuestionText = "Do you smoke or use tobacco products inside residential premises?",
                             WeightPoints = 34
                         });
+                });
+
+            modelBuilder.Entity("TenantScoring.Models.FeedbackQuestion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("category");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int")
+                        .HasColumnName("display_order");
+
+                    b.Property<string>("QuestionText")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("question_text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Category", "DisplayOrder")
+                        .IsUnique();
+
+                    b.ToTable("feedback_questions", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("a1000001-0000-0000-0000-000000000001"),
+                            Category = "TENANT_TO_OWNER",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 1,
+                            QuestionText = "Responsiveness to Maintenance: How quickly and effectively did the owner address maintenance requests?"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1000001-0000-0000-0000-000000000002"),
+                            Category = "TENANT_TO_OWNER",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 2,
+                            QuestionText = "Clarity of Communication: How clear, transparent, and professional was the owner in their communication?"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1000001-0000-0000-0000-000000000003"),
+                            Category = "TENANT_TO_OWNER",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 3,
+                            QuestionText = "Property Condition at Move-In: How well did the initial property condition match what was advertised?"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1000001-0000-0000-0000-000000000004"),
+                            Category = "TENANT_TO_OWNER",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 4,
+                            QuestionText = "Respect for Privacy: How well did the owner respect your privacy and provide adequate notice before entering?"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1000001-0000-0000-0000-000000000005"),
+                            Category = "TENANT_TO_OWNER",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 5,
+                            QuestionText = "Fairness in Financial Dealings: How fair and transparent was the owner regarding deposit returns and fees?"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1000001-0000-0000-0000-000000000006"),
+                            Category = "TENANT_TO_OWNER",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 6,
+                            QuestionText = "General Habitability & Upkeep: How well-maintained are the building's common areas and shared amenities?"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1000001-0000-0000-0000-000000000007"),
+                            Category = "TENANT_TO_OWNER",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 7,
+                            QuestionText = "Problem-Solving & Conflict Resolution: How cooperative was the owner in resolving issues or disagreements?"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1000001-0000-0000-0000-000000000008"),
+                            Category = "TENANT_TO_OWNER",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 8,
+                            QuestionText = "Lease Renewal & Flexibility: How reasonable was the owner regarding lease terms and moving out?"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1000001-0000-0000-0000-000000000009"),
+                            Category = "TENANT_TO_OWNER",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 9,
+                            QuestionText = "Overall Value for Money: How satisfied were you with the overall quality of living relative to rent paid?"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1000001-0000-0000-0000-000000000010"),
+                            Category = "TENANT_TO_OWNER",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 10,
+                            QuestionText = "Likelihood of Re-renting: How likely are you to rent from this owner again or recommend them?"
+                        },
+                        new
+                        {
+                            Id = new Guid("a2000001-0000-0000-0000-000000000001"),
+                            Category = "OWNER_TO_TENANT",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 1,
+                            QuestionText = "Timeliness of Rent Payments: How consistently did the tenant pay rent on or before the due date?"
+                        },
+                        new
+                        {
+                            Id = new Guid("a2000001-0000-0000-0000-000000000002"),
+                            Category = "OWNER_TO_TENANT",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 2,
+                            QuestionText = "Care of Property & Cleanliness: How well did the tenant maintain the interior condition of the property?"
+                        },
+                        new
+                        {
+                            Id = new Guid("a2000001-0000-0000-0000-000000000003"),
+                            Category = "OWNER_TO_TENANT",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 3,
+                            QuestionText = "Communication & Responsiveness: How responsive was the tenant regarding notices and administrative matters?"
+                        },
+                        new
+                        {
+                            Id = new Guid("a2000001-0000-0000-0000-000000000004"),
+                            Category = "OWNER_TO_TENANT",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 4,
+                            QuestionText = "Adherence to Lease Rules: How well did the tenant follow building rules, pet policies, and lease terms?"
+                        },
+                        new
+                        {
+                            Id = new Guid("a2000001-0000-0000-0000-000000000005"),
+                            Category = "OWNER_TO_TENANT",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 5,
+                            QuestionText = "Prompt Reporting of Issues: Did the tenant report maintenance issues early before they escalated?"
+                        },
+                        new
+                        {
+                            Id = new Guid("a2000001-0000-0000-0000-000000000006"),
+                            Category = "OWNER_TO_TENANT",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 6,
+                            QuestionText = "Neighbor Relations & Conduct: How respectful was the tenant toward neighbors and noise levels?"
+                        },
+                        new
+                        {
+                            Id = new Guid("a2000001-0000-0000-0000-000000000007"),
+                            Category = "OWNER_TO_TENANT",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 7,
+                            QuestionText = "Handling of Move-Out / Handover: How clean and undamaged was the property returned at move-out?"
+                        },
+                        new
+                        {
+                            Id = new Guid("a2000001-0000-0000-0000-000000000008"),
+                            Category = "OWNER_TO_TENANT",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 8,
+                            QuestionText = "Self-Sufficiency / Minor Upkeep: How capable was the tenant of handling basic, day-to-day minor tasks?"
+                        },
+                        new
+                        {
+                            Id = new Guid("a2000001-0000-0000-0000-000000000009"),
+                            Category = "OWNER_TO_TENANT",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 9,
+                            QuestionText = "Trustworthiness & Honesty: How reliable and honest was the tenant in all interactions?"
+                        },
+                        new
+                        {
+                            Id = new Guid("a2000001-0000-0000-0000-000000000010"),
+                            Category = "OWNER_TO_TENANT",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 10,
+                            QuestionText = "Likelihood of Renting Again: How likely would you be to rent to this tenant again in the future?"
+                        });
+                });
+
+            modelBuilder.Entity("TenantScoring.Models.FeedbackResponse", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("question_id");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("int")
+                        .HasColumnName("rating");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("session_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QuestionId");
+
+                    b.HasIndex("SessionId", "QuestionId")
+                        .IsUnique();
+
+                    b.ToTable("feedback_responses", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_feedback_responses_Rating", "[rating] >= 1 AND [rating] <= 5");
+                        });
+                });
+
+            modelBuilder.Entity("TenantScoring.Models.FeedbackSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("EvaluatorId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("evaluator_id");
+
+                    b.Property<string>("FeedbackType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("feedback_type");
+
+                    b.Property<Guid>("LeaseId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("lease_id");
+
+                    b.Property<double?>("OverallScore")
+                        .HasColumnType("float")
+                        .HasColumnName("overall_score");
+
+                    b.Property<Guid>("PropertyId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("property_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("subject_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EvaluatorId");
+
+                    b.HasIndex("PropertyId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("LeaseId", "FeedbackType")
+                        .IsUnique();
+
+                    b.ToTable("feedback_sessions", (string)null);
                 });
 
             modelBuilder.Entity("TenantScoring.Models.Lease", b =>
@@ -517,20 +807,6 @@ namespace TenantScoring.Data.Migrations
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
 
-                    b.Property<string>("ProfileCode")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(13)
-                        .HasColumnType("nvarchar(13)")
-                        .HasDefaultValueSql("N'KID' + RIGHT('0000000000' + CONVERT(varchar(10), NEXT VALUE FOR dbo.ProfileCodeSequence), 10)");
-
-                    b.Property<string>("ProfileImageContentType")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<byte[]>("ProfileImageData")
-                        .HasColumnType("varbinary(max)");
-
                     b.Property<string>("FirstName")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -546,8 +822,22 @@ namespace TenantScoring.Data.Migrations
                     b.Property<bool>("PanVerified")
                         .HasColumnType("bit");
 
+                    b.Property<string>("ProfileCode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(13)
+                        .HasColumnType("nvarchar(13)")
+                        .HasDefaultValueSql("N'KID' + RIGHT('0000000000' + CONVERT(varchar(10), NEXT VALUE FOR dbo.ProfileCodeSequence), 10)");
+
                     b.Property<int>("ProfileCompletionScore")
                         .HasColumnType("int");
+
+                    b.Property<string>("ProfileImageContentType")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<byte[]>("ProfileImageData")
+                        .HasColumnType("varbinary(max)");
 
                     b.Property<int>("RewardPoints")
                         .HasColumnType("int");
@@ -560,13 +850,67 @@ namespace TenantScoring.Data.Migrations
 
                     b.HasKey("ProfileId");
 
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
                     b.HasIndex("ProfileCode")
                         .IsUnique();
 
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
                     b.ToTable("UserProfiles", (string)null);
+                });
+
+            modelBuilder.Entity("TenantScoring.Models.FeedbackResponse", b =>
+                {
+                    b.HasOne("TenantScoring.Models.FeedbackQuestion", "Question")
+                        .WithMany("Responses")
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TenantScoring.Models.FeedbackSession", "Session")
+                        .WithMany("Responses")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Question");
+
+                    b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("TenantScoring.Models.FeedbackSession", b =>
+                {
+                    b.HasOne("TenantScoring.Models.User", "Evaluator")
+                        .WithMany()
+                        .HasForeignKey("EvaluatorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TenantScoring.Models.Lease", "Lease")
+                        .WithMany()
+                        .HasForeignKey("LeaseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TenantScoring.Models.Property", "Property")
+                        .WithMany()
+                        .HasForeignKey("PropertyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TenantScoring.Models.User", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Evaluator");
+
+                    b.Navigation("Lease");
+
+                    b.Navigation("Property");
+
+                    b.Navigation("Subject");
                 });
 
             modelBuilder.Entity("TenantScoring.Models.Lease", b =>
@@ -705,6 +1049,16 @@ namespace TenantScoring.Data.Migrations
                 });
 
             modelBuilder.Entity("TenantScoring.Models.BehavioralQuestion", b =>
+                {
+                    b.Navigation("Responses");
+                });
+
+            modelBuilder.Entity("TenantScoring.Models.FeedbackQuestion", b =>
+                {
+                    b.Navigation("Responses");
+                });
+
+            modelBuilder.Entity("TenantScoring.Models.FeedbackSession", b =>
                 {
                     b.Navigation("Responses");
                 });

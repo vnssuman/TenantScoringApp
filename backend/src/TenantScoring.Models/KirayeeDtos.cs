@@ -48,3 +48,10 @@ public sealed record PaymentRequest(decimal Amount, string TransactionReference)
 public sealed record PaymentResponse(Guid PaymentId, decimal Amount, DateTime DueDate, DateTime? PaidDate, string Status, int RewardPointsEarned);
 public sealed record TenantRentPaymentRecord(Guid PaymentId, DateTime DueDate, DateTime? PaidDate, decimal Amount, string Status, int RewardPointsEarned);
 public sealed record TenantPaymentPropertyRecord(Guid LeaseId, Guid PropertyId, string PropertyName, string PropertyType, string Location, DateTime? StartDate, DateTime? EndDate, string LeaseStatus, IReadOnlyList<TenantRentPaymentRecord> Payments);
+public sealed record FeedbackQuestionResponse(Guid QuestionId, string QuestionText, int DisplayOrder);
+public sealed record FeedbackPendingSessionResponse(Guid SessionId, Guid LeaseId, Guid PropertyId, string PropertyName, string SubjectName, string FeedbackType, IReadOnlyList<FeedbackQuestionResponse> Questions);
+public sealed record FeedbackHistoryRatingResponse(string QuestionText, int DisplayOrder, int Rating);
+public sealed record FeedbackHistoryResponse(Guid SessionId, Guid LeaseId, Guid PropertyId, string PropertyName, string FeedbackType, string Direction, string CounterpartyName, double OverallScore, DateTime CompletedAt, IReadOnlyList<FeedbackHistoryRatingResponse> Responses);
+public sealed record FeedbackRatingSubmission(Guid QuestionId, int Rating);
+public sealed record FeedbackSubmissionRequest(Guid SessionId, IReadOnlyList<FeedbackRatingSubmission>? Responses);
+public sealed record FeedbackSubmissionResponse(Guid SessionId, string Status, double OverallScore, DateTime CompletedAt);

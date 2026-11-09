@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
-import { ArrowLeft, FileText, MapPin, Paperclip, Pencil, Plane, UserRound, Wallet } from 'lucide-react';
+import { ArrowLeft, FileText, MapPin, Paperclip, Pencil, Plane, UserRound, Wallet, XCircle } from 'lucide-react';
 import { getProperties } from '../../services/propertyApi';
-import { downloadRentalAgreement, getRentalRequests, searchTenants, sendRentalRequest, updateSentBackRentalRequest, withdrawRentalRequest } from '../../services/rentalRequestApi';
+import { downloadRentalAgreement, getRentalRequests, respondToRentalRequest, searchTenants, sendRentalRequest, updateSentBackRentalRequest, withdrawRentalRequest } from '../../services/rentalRequestApi';
 import { getCurrentProfile } from '../../services/profileApi';
 import { ActionModal } from '../../components/ActionModal';
 import type { PropertyRecord } from '../../types/property';
@@ -18,6 +18,8 @@ export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement 
   const [properties, setProperties] = useState<PropertyRecord[]>([]);
   const [isRequestOpen, setIsRequestOpen] = useState(false);
   const [editingRequest, setEditingRequest] = useState<RentalRequestRecord | null>(null);
+  const [cancellationRequest, setCancellationRequest] = useState<RentalRequestRecord | null>(null);
+  const [cancellationSubmitting, setCancellationSubmitting] = useState(false);
   const [step, setStep] = useState<RequestStep>(1);
   const [selectedProperty, setSelectedProperty] = useState<PropertyRecord | null>(null);
   const [tenantQuery, setTenantQuery] = useState('');
@@ -33,7 +35,7 @@ export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement 
 
   async function refreshRequests(): Promise<void> {
     const requests = await getRentalRequests();
-    setActiveRenters(requests.filter((request) => request.status === 'Active'));
+    setActiveRenters(requests.filter((request) => request.status === 'Active' || request.status === 'OwnerCancellationRequested'));
     setSentRequests(requests.filter((request) => request.status === 'Pending' || request.status === 'SentBack'));
     setRequestHistory(requests.filter((request) => !['Active', 'Pending', 'SentBack'].includes(request.status)));
   }
@@ -49,7 +51,7 @@ export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement 
         ]);
         if (active) {
           setProperties(ownerProperties);
-          setActiveRenters(ownerRequests.filter((request) => request.status === 'Active'));
+          setActiveRenters(ownerRequests.filter((request) => request.status === 'Active' || request.status === 'OwnerCancellationRequested'));
           setSentRequests(ownerRequests.filter((request) => request.status === 'Pending' || request.status === 'SentBack'));
           setRequestHistory(ownerRequests.filter((request) => !['Active', 'Pending', 'SentBack'].includes(request.status)));
         }
@@ -147,6 +149,21 @@ export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement 
     await refreshRequests();
   }
 
+  async function sendCancellationRequest(): Promise<void> {
+    if (!cancellationRequest) return;
+    setCancellationSubmitting(true);
+    setError('');
+    try {
+      await respondToRentalRequest(cancellationRequest.leaseId, 'request-cancellation');
+      setCancellationRequest(null);
+      await refreshRequests();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Tenancy cancellation request could not be sent.');
+    } finally {
+      setCancellationSubmitting(false);
+    }
+  }
+
   const vacantProperties = properties.filter((property) => property.is_vacant);
 
   return (
@@ -197,7 +214,7 @@ export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement 
           {loading ? <p className="mapping-loading">Loading tenant mappings...</p> : activeTab === 'active' ? (
             activeRenters.length === 0 ? <EmptyRenters onSend={openRequestFlow} /> : (
               <section className="mapping-list" aria-label="Active renters">
-                {activeRenters.map((request) => <RequestCard key={request.leaseId} request={request} onDownload={() => downloadRentalAgreement(request.leaseId)} />)}
+                {activeRenters.map((request) => <RequestCard key={request.leaseId} request={request} onDownload={() => downloadRentalAgreement(request.leaseId)} onRequestCancellation={request.status === 'Active' ? () => setCancellationRequest(request) : undefined} />)}
               </section>
             )
           ) : activeTab === 'sent' && sentRequests.length === 0 ? (
@@ -215,6 +232,16 @@ export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement 
           )}
         </>
       )}
+      <ActionModal
+        isOpen={cancellationRequest !== null}
+        title="Request tenancy cancellation?"
+        message={cancellationRequest ? <>Send a cancellation request to <strong>{cancellationRequest.tenantName}</strong> for <strong>{cancellationRequest.propertyName}</strong>? The tenancy will remain active unless the tenant accepts.</> : ''}
+        onClose={() => { if (!cancellationSubmitting) setCancellationRequest(null); }}
+        actions={[
+          { label: 'Keep tenancy', onClick: () => setCancellationRequest(null), variant: 'secondary', disabled: cancellationSubmitting },
+          { label: cancellationSubmitting ? 'Sending...' : 'Send request', onClick: sendCancellationRequest, variant: 'danger', disabled: cancellationSubmitting },
+        ]}
+      />
     </main>
   );
 }
@@ -223,7 +250,7 @@ function EmptyRenters({ onSend }: { onSend: () => void }): ReactElement {
   return <section className="mapping-empty-state"><span className="mapping-empty-icon"><UserRound size={24} /></span><h2>No Active Renters</h2><p>Send rental requests to renters to get started</p><button className="mapping-send-button" type="button" onClick={onSend}><Plane size={15} /> Send Request</button></section>;
 }
 
-function RequestCard({ request, onDownload, onWithdraw, onEdit }: { request: RentalRequestRecord; onDownload: () => Promise<void>; onWithdraw?: () => Promise<void>; onEdit?: () => void }): ReactElement {
+function RequestCard({ request, onDownload, onWithdraw, onEdit, onRequestCancellation }: { request: RentalRequestRecord; onDownload: () => Promise<void>; onWithdraw?: () => Promise<void>; onEdit?: () => void; onRequestCancellation?: () => void }): ReactElement {
   const [downloadError, setDownloadError] = useState('');
   const [withdrawError, setWithdrawError] = useState('');
   const [withdrawing, setWithdrawing] = useState(false);
@@ -241,7 +268,7 @@ function RequestCard({ request, onDownload, onWithdraw, onEdit }: { request: Ren
       setWithdrawing(false);
     }
   }
-  return <article className="rental-request-card"><header className="rental-request-heading"><div><h2>{request.propertyName}</h2><p><MapPin size={14} />{request.location}</p></div><span className={`rental-request-status ${request.status.toLowerCase()}`}>{request.status === 'SentBack' ? 'Sent Back' : request.status}</span></header><div className="rental-request-metadata"><div><span>Profile ID</span><strong className="mapping-profile-id">{request.profileCode}</strong></div><div><span>Monthly Rent</span><strong>{formatCurrency(request.agreedRent)}</strong></div><div><span>Start Date</span><strong>{formatDate(request.startDate)}</strong></div><div><span>End Date</span><strong>{formatDate(request.endDate)}</strong></div></div>{request.tenantComments && <p className="rental-request-comments"><strong>Tenant comments:</strong> {request.tenantComments}</p>}{(request.hasAgreementDocument || onWithdraw || onEdit) && <footer className="rental-request-footer">{request.hasAgreementDocument && <button type="button" onClick={() => { setDownloadError(''); void onDownload().catch((reason: unknown) => setDownloadError(reason instanceof Error ? reason.message : 'Document download failed.')); }}><FileText size={16} />Mock Agreement Document - Standard Rental Agreement.pdf</button>}{downloadError && <small role="alert">{downloadError}</small>}{withdrawError && <small role="alert">{withdrawError}</small>}{(onEdit || onWithdraw) && <div className="mapping-request-actions">{onEdit && <button className="mapping-edit-request-button" type="button" onClick={onEdit}><Pencil size={14} />Edit and resend</button>}{onWithdraw && <button className="mapping-withdraw-button" type="button" disabled={withdrawing} onClick={() => { setWithdrawError(''); setIsWithdrawModalOpen(true); }}>Withdraw request</button>}</div>}</footer>}
+  return <article className="rental-request-card"><header className="rental-request-heading"><div><h2>{request.propertyName}</h2><p><MapPin size={14} />{request.location}</p></div><span className={`rental-request-status ${request.status.toLowerCase()}`}>{request.status === 'SentBack' ? 'Sent Back' : request.status === 'OwnerCancellationRequested' ? 'Cancellation Pending Tenant' : request.status}</span></header><div className="rental-request-metadata"><div><span>Profile ID</span><strong className="mapping-profile-id">{request.profileCode}</strong></div><div><span>Monthly Rent</span><strong>{formatCurrency(request.agreedRent)}</strong></div><div><span>Start Date</span><strong>{formatDate(request.startDate)}</strong></div><div><span>End Date</span><strong>{formatDate(request.endDate)}</strong></div></div>{request.tenantComments && <p className="rental-request-comments"><strong>Tenant comments:</strong> {request.tenantComments}</p>}{(request.hasAgreementDocument || onWithdraw || onEdit || onRequestCancellation) && <footer className="rental-request-footer">{request.hasAgreementDocument && <button type="button" onClick={() => { setDownloadError(''); void onDownload().catch((reason: unknown) => setDownloadError(reason instanceof Error ? reason.message : 'Document download failed.')); }}><FileText size={16} />Mock Agreement Document - Standard Rental Agreement.pdf</button>}{downloadError && <small role="alert">{downloadError}</small>}{withdrawError && <small role="alert">{withdrawError}</small>}{(onEdit || onWithdraw || onRequestCancellation) && <div className="mapping-request-actions">{onEdit && <button className="mapping-edit-request-button" type="button" onClick={onEdit}><Pencil size={14} />Edit and resend</button>}{onWithdraw && <button className="mapping-withdraw-button" type="button" disabled={withdrawing} onClick={() => { setWithdrawError(''); setIsWithdrawModalOpen(true); }}>Withdraw request</button>}{onRequestCancellation && <button className="mapping-withdraw-button" type="button" onClick={onRequestCancellation}><XCircle size={14} />Request tenancy cancellation</button>}</div>}</footer>}
     <ActionModal
       isOpen={isWithdrawModalOpen}
       title="Withdraw rental request?"

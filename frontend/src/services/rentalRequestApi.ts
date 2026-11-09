@@ -43,7 +43,7 @@ export function getTenantRentalHistory(): Promise<TenantRentalRequestRecord[]> {
   return request<TenantRentalRequestRecord[]>('/api/tenant/rental-history');
 }
 
-export function respondToRentalRequest(leaseId: string, action: 'accept'): Promise<void> {
+export function respondToRentalRequest(leaseId: string, action: 'accept' | 'request-cancellation' | 'accept-cancellation'): Promise<void> {
   return request<void>(`/api/kirayee/leases/${encodeURIComponent(leaseId)}/${action}`, { method: 'POST' });
 }
 

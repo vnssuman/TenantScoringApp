@@ -14,6 +14,9 @@ public sealed class TenantDbContext(DbContextOptions<TenantDbContext> options) :
     public DbSet<Lease> Leases => Set<Lease>();
     public DbSet<RentPayment> RentPayments => Set<RentPayment>();
     public DbSet<OwnerFeedback> OwnerFeedbacks => Set<OwnerFeedback>();
+    public DbSet<FeedbackQuestion> FeedbackQuestions => Set<FeedbackQuestion>();
+    public DbSet<FeedbackSession> FeedbackSessions => Set<FeedbackSession>();
+    public DbSet<FeedbackResponse> FeedbackResponses => Set<FeedbackResponse>();
     public DbSet<BehavioralQuestion> BehavioralQuestions => Set<BehavioralQuestion>();
     public DbSet<TenantBehavioralResponse> TenantBehavioralResponses => Set<TenantBehavioralResponse>();
 
@@ -145,5 +148,47 @@ public sealed class TenantDbContext(DbContextOptions<TenantDbContext> options) :
         feedback.HasOne(item => item.Lease).WithMany(item => item.Feedback).HasForeignKey(item => item.LeaseId).OnDelete(DeleteBehavior.Cascade);
         feedback.HasOne(item => item.Tenant).WithMany().HasForeignKey(item => item.TenantId).OnDelete(DeleteBehavior.Restrict);
         feedback.HasOne(item => item.Owner).WithMany().HasForeignKey(item => item.OwnerId).OnDelete(DeleteBehavior.Restrict);
+
+        var feedbackQuestion = modelBuilder.Entity<FeedbackQuestion>();
+        feedbackQuestion.ToTable("feedback_questions");
+        feedbackQuestion.HasKey(item => item.Id);
+        feedbackQuestion.Property(item => item.Id).HasColumnName("id");
+        feedbackQuestion.Property(item => item.Category).HasColumnName("category").HasMaxLength(30).IsRequired();
+        feedbackQuestion.Property(item => item.QuestionText).HasColumnName("question_text").HasMaxLength(500).IsRequired();
+        feedbackQuestion.Property(item => item.DisplayOrder).HasColumnName("display_order");
+        feedbackQuestion.Property(item => item.CreatedAt).HasColumnName("created_at");
+        feedbackQuestion.HasIndex(item => new { item.Category, item.DisplayOrder }).IsUnique();
+        feedbackQuestion.HasData(FeedbackQuestionSeed.All);
+
+        var feedbackSession = modelBuilder.Entity<FeedbackSession>();
+        feedbackSession.ToTable("feedback_sessions");
+        feedbackSession.HasKey(item => item.Id);
+        feedbackSession.Property(item => item.Id).HasColumnName("id");
+        feedbackSession.Property(item => item.LeaseId).HasColumnName("lease_id");
+        feedbackSession.Property(item => item.PropertyId).HasColumnName("property_id");
+        feedbackSession.Property(item => item.EvaluatorId).HasColumnName("evaluator_id");
+        feedbackSession.Property(item => item.SubjectId).HasColumnName("subject_id");
+        feedbackSession.Property(item => item.FeedbackType).HasColumnName("feedback_type").HasMaxLength(30).IsRequired();
+        feedbackSession.Property(item => item.Status).HasColumnName("status").HasMaxLength(20).IsRequired();
+        feedbackSession.Property(item => item.OverallScore).HasColumnName("overall_score").HasColumnType("float");
+        feedbackSession.Property(item => item.CreatedAt).HasColumnName("created_at");
+        feedbackSession.Property(item => item.CompletedAt).HasColumnName("completed_at");
+        feedbackSession.HasIndex(item => new { item.LeaseId, item.FeedbackType }).IsUnique();
+        feedbackSession.HasOne(item => item.Lease).WithMany().HasForeignKey(item => item.LeaseId).OnDelete(DeleteBehavior.Cascade);
+        feedbackSession.HasOne(item => item.Property).WithMany().HasForeignKey(item => item.PropertyId).OnDelete(DeleteBehavior.Restrict);
+        feedbackSession.HasOne(item => item.Evaluator).WithMany().HasForeignKey(item => item.EvaluatorId).OnDelete(DeleteBehavior.Restrict);
+        feedbackSession.HasOne(item => item.Subject).WithMany().HasForeignKey(item => item.SubjectId).OnDelete(DeleteBehavior.Restrict);
+
+        var feedbackResponse = modelBuilder.Entity<FeedbackResponse>();
+        feedbackResponse.ToTable("feedback_responses");
+        feedbackResponse.HasKey(item => item.Id);
+        feedbackResponse.Property(item => item.Id).HasColumnName("id");
+        feedbackResponse.Property(item => item.SessionId).HasColumnName("session_id");
+        feedbackResponse.Property(item => item.QuestionId).HasColumnName("question_id");
+        feedbackResponse.Property(item => item.Rating).HasColumnName("rating");
+        feedbackResponse.HasIndex(item => new { item.SessionId, item.QuestionId }).IsUnique();
+        feedbackResponse.ToTable(table => table.HasCheckConstraint("CK_feedback_responses_Rating", "[rating] >= 1 AND [rating] <= 5"));
+        feedbackResponse.HasOne(item => item.Session).WithMany(item => item.Responses).HasForeignKey(item => item.SessionId).OnDelete(DeleteBehavior.Cascade);
+        feedbackResponse.HasOne(item => item.Question).WithMany(item => item.Responses).HasForeignKey(item => item.QuestionId).OnDelete(DeleteBehavior.Restrict);
     }
 }

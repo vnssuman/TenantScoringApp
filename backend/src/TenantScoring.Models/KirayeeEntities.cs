@@ -267,7 +267,7 @@ public sealed class Lease
     public ICollection<OwnerFeedback> Feedback { get; private set; } = new List<OwnerFeedback>();
 
     public bool IsLiveOn(DateTime date) =>
-        Status is "Active" or "CancellationRequested"
+        Status is "Active" or "CancellationRequested" or "OwnerCancellationRequested"
         && (StartDate is null || StartDate.Value.Date <= date.Date)
         && (EndDate is null || EndDate.Value.Date >= date.Date);
 
@@ -295,6 +295,16 @@ public sealed class Lease
 
     public void Withdraw() => Status = "Withdrawn";
     public void RequestCancellation() => Status = "CancellationRequested";
+    public void RequestOwnerCancellation()
+    {
+        if (Status != "Active") throw new InvalidOperationException("Only active tenancies can be cancelled.");
+        Status = "OwnerCancellationRequested";
+    }
+    public void AcceptOwnerCancellationRequest()
+    {
+        if (Status != "OwnerCancellationRequested") throw new InvalidOperationException("There is no owner cancellation request to accept.");
+        Status = "Terminated";
+    }
     public void Terminate() => Status = "Terminated";
 }
 

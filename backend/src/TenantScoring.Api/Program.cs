@@ -364,6 +364,30 @@ app.MapPost("/api/kirayee/leases/{leaseId:guid}/{action}", async (HttpRequest re
     return lease is null ? Results.BadRequest(new { message = "The lease action is not permitted." }) : Results.Ok(lease);
 });
 
+app.MapGet("/api/feedback/pending", async (HttpRequest request, IKirayeeService service, CancellationToken cancellationToken) =>
+{
+    var userId = GetUserId(request);
+    if (userId is null) return Results.Unauthorized();
+    var feedback = await service.GetPendingFeedbackAsync(userId.Value, cancellationToken);
+    return feedback is null ? Results.NotFound() : Results.Ok(feedback);
+});
+
+app.MapGet("/api/feedback/history", async (HttpRequest request, IKirayeeService service, CancellationToken cancellationToken) =>
+{
+    var userId = GetUserId(request);
+    if (userId is null) return Results.Unauthorized();
+    var feedback = await service.GetFeedbackHistoryAsync(userId.Value, cancellationToken);
+    return feedback is null ? Results.NotFound() : Results.Ok(feedback);
+});
+
+app.MapPost("/api/feedback/submit", async (HttpRequest request, FeedbackSubmissionRequest body, IKirayeeService service, CancellationToken cancellationToken) =>
+{
+    var userId = GetUserId(request);
+    if (userId is null) return Results.Unauthorized();
+    var result = await service.SubmitFeedbackAsync(userId.Value, body, cancellationToken);
+    return result is null ? Results.BadRequest(new { message = "Feedback must contain one valid rating for each question in a pending request assigned to you." }) : Results.Ok(result);
+});
+
 app.MapPost("/api/kirayee/leases/{leaseId:guid}/send-back", async (HttpRequest request, Guid leaseId, TenantRequestCommentRequest body, IKirayeeService service, CancellationToken cancellationToken) =>
 {
     var userId = GetUserId(request);

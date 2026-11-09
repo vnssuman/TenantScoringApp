@@ -139,6 +139,36 @@ public sealed class PropertyManagementTests
     }
 
     [Fact]
+    public void OwnerCancellationRequestKeepsTenancyLiveUntilTenantAccepts()
+    {
+        var property = new Property(Guid.NewGuid(), "Skyline", "Apartment", "12 Park Road", "Pune", "Maharashtra", 20000);
+        var lease = new Lease(property.PropertyId, Guid.NewGuid(), property.OwnerId, 20000, 0);
+        lease.SetRentalTerms(DateTime.UtcNow.Date.AddDays(-30), DateTime.UtcNow.Date.AddDays(30), null);
+        lease.Accept();
+        property.Leases.Add(lease);
+
+        lease.RequestOwnerCancellation();
+
+        Assert.Equal("OwnerCancellationRequested", lease.Status);
+        Assert.True(lease.IsLiveOn(DateTime.UtcNow));
+        Assert.True(property.HasLiveLeaseOn(DateTime.UtcNow));
+
+        lease.AcceptOwnerCancellationRequest();
+
+        Assert.Equal("Terminated", lease.Status);
+        Assert.False(lease.IsLiveOn(DateTime.UtcNow));
+        Assert.False(property.HasLiveLeaseOn(DateTime.UtcNow));
+    }
+
+    [Fact]
+    public void TenantCannotAcceptOwnerCancellationWhenNoRequestIsPending()
+    {
+        var lease = new Lease(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 20000, 0);
+
+        Assert.Throws<InvalidOperationException>(() => lease.AcceptOwnerCancellationRequest());
+    }
+
+    [Fact]
     public void ExpiredLeaseDoesNotOccupyProperty()
     {
         var property = new Property(Guid.NewGuid(), "Skyline", "Apartment", "12 Park Road", "Pune", "Maharashtra", 20000);

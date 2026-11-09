@@ -78,7 +78,28 @@ public sealed class KirayeeRepository(TenantDbContext dbContext) : IKirayeeRepos
     public async Task AddScoreAsync(TenantScore score, CancellationToken cancellationToken) { await dbContext.TenantScores.AddAsync(score, cancellationToken); await dbContext.SaveChangesAsync(cancellationToken); }
     public Task<TenantScore?> GetLatestScoreAsync(Guid tenantId, CancellationToken cancellationToken) => dbContext.TenantScores.Where(score => score.TenantId == tenantId).OrderByDescending(score => score.CalculatedAt).FirstOrDefaultAsync(cancellationToken);
     public async Task AddLeaseAsync(Lease lease, CancellationToken cancellationToken) { await dbContext.Leases.AddAsync(lease, cancellationToken); await dbContext.SaveChangesAsync(cancellationToken); }
-    public Task<Lease?> FindLeaseAsync(Guid leaseId, CancellationToken cancellationToken) => dbContext.Leases.Include(lease => lease.Property).Include(lease => lease.Tenant).ThenInclude(tenant => tenant.Profile).SingleOrDefaultAsync(lease => lease.LeaseId == leaseId, cancellationToken);
+    public Task<Lease?> FindLeaseAsync(Guid leaseId, CancellationToken cancellationToken) => dbContext.Leases.Include(lease => lease.Property).ThenInclude(property => property.Leases).Include(lease => lease.Tenant).ThenInclude(tenant => tenant.Profile).SingleOrDefaultAsync(lease => lease.LeaseId == leaseId, cancellationToken);
+    public Task AddFeedbackSessionsAsync(IEnumerable<FeedbackSession> sessions, CancellationToken cancellationToken) => dbContext.FeedbackSessions.AddRangeAsync(sessions, cancellationToken);
+    public async Task<IReadOnlyList<FeedbackSession>> GetPendingFeedbackSessionsAsync(Guid evaluatorId, CancellationToken cancellationToken) => await dbContext.FeedbackSessions.AsNoTracking()
+        .Include(session => session.Property)
+        .Include(session => session.Subject).ThenInclude(subject => subject.Profile)
+        .Where(session => session.EvaluatorId == evaluatorId && session.Status == "PENDING")
+        .OrderBy(session => session.CreatedAt)
+        .ToListAsync(cancellationToken);
+    public async Task<IReadOnlyList<FeedbackSession>> GetFeedbackHistoryAsync(Guid userId, CancellationToken cancellationToken) => await dbContext.FeedbackSessions.AsNoTracking()
+        .Include(session => session.Property)
+        .Include(session => session.Evaluator).ThenInclude(evaluator => evaluator.Profile)
+        .Include(session => session.Subject).ThenInclude(subject => subject.Profile)
+        .Include(session => session.Responses).ThenInclude(response => response.Question)
+        .Where(session => session.SubjectId == userId && session.Status == "COMPLETED")
+        .OrderByDescending(session => session.CompletedAt)
+        .ToListAsync(cancellationToken);
+    public async Task<IReadOnlyList<FeedbackQuestion>> GetFeedbackQuestionsAsync(CancellationToken cancellationToken) => await dbContext.FeedbackQuestions.AsNoTracking()
+        .OrderBy(question => question.Category).ThenBy(question => question.DisplayOrder)
+        .ToListAsync(cancellationToken);
+    public Task<FeedbackSession?> FindFeedbackSessionAsync(Guid sessionId, CancellationToken cancellationToken) => dbContext.FeedbackSessions.AsTracking()
+        .SingleOrDefaultAsync(session => session.Id == sessionId, cancellationToken);
+    public Task AddFeedbackResponsesAsync(IEnumerable<FeedbackResponse> responses, CancellationToken cancellationToken) => dbContext.FeedbackResponses.AddRangeAsync(responses, cancellationToken);
     public async Task<IReadOnlyList<Lease>> GetLeasesAsync(Guid userId, CancellationToken cancellationToken) => await dbContext.Leases.AsNoTracking().Where(lease => lease.TenantId == userId || lease.OwnerId == userId).ToListAsync(cancellationToken);
     public async Task<IReadOnlyList<Lease>> GetTenantPaymentLeasesAsync(Guid tenantId, CancellationToken cancellationToken) => await dbContext.Leases.AsNoTracking()
         .Include(lease => lease.Property)

@@ -27,6 +27,12 @@ public interface IKirayeeRepository
     Task<TenantScore?> GetLatestScoreAsync(Guid tenantId, CancellationToken cancellationToken);
     Task AddLeaseAsync(Lease lease, CancellationToken cancellationToken);
     Task<Lease?> FindLeaseAsync(Guid leaseId, CancellationToken cancellationToken);
+    Task AddFeedbackSessionsAsync(IEnumerable<FeedbackSession> sessions, CancellationToken cancellationToken);
+    Task<IReadOnlyList<FeedbackSession>> GetPendingFeedbackSessionsAsync(Guid evaluatorId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<FeedbackSession>> GetFeedbackHistoryAsync(Guid userId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<FeedbackQuestion>> GetFeedbackQuestionsAsync(CancellationToken cancellationToken);
+    Task<FeedbackSession?> FindFeedbackSessionAsync(Guid sessionId, CancellationToken cancellationToken);
+    Task AddFeedbackResponsesAsync(IEnumerable<FeedbackResponse> responses, CancellationToken cancellationToken);
     Task<IReadOnlyList<Lease>> GetLeasesAsync(Guid userId, CancellationToken cancellationToken);
     Task<IReadOnlyList<Lease>> GetTenantPaymentLeasesAsync(Guid tenantId, CancellationToken cancellationToken);
     Task AddPaymentsAsync(IEnumerable<RentPayment> payments, CancellationToken cancellationToken);
@@ -66,6 +72,9 @@ public interface IKirayeeService
     Task<IReadOnlyList<LeaseResponse>> GetLeasesAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TenantPaymentPropertyRecord>?> GetTenantPaymentRecordsAsync(Guid tenantId, CancellationToken cancellationToken = default);
     Task<LeaseResponse?> ChangeLeaseStatusAsync(Guid userId, Guid leaseId, string action, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<FeedbackPendingSessionResponse>?> GetPendingFeedbackAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<FeedbackHistoryResponse>?> GetFeedbackHistoryAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<FeedbackSubmissionResponse?> SubmitFeedbackAsync(Guid userId, FeedbackSubmissionRequest request, CancellationToken cancellationToken = default);
     Task<PaymentResponse?> PayAsync(Guid userId, Guid paymentId, PaymentRequest request, CancellationToken cancellationToken = default);
 }
 
@@ -303,7 +312,7 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
     public async Task<IReadOnlyList<TenantRentalRequestResponse>?> GetTenantRentalHistoryAsync(Guid tenantId, CancellationToken cancellationToken = default)
     {
         var rentals = await GetTenantRentalRequestsAsync(tenantId, null, cancellationToken);
-        return rentals?.Where(rental => rental.Status is "Active" or "CancellationRequested" or "Terminated").ToArray();
+        return rentals?.Where(rental => rental.Status is "Active" or "CancellationRequested" or "OwnerCancellationRequested" or "Terminated").ToArray();
     }
 
     public async Task<RentalRequestResponse?> CreateRentalRequestAsync(Guid ownerId, Guid propertyId, Guid tenantId, decimal rentAmount, DateTime startDate, DateTime endDate, string? documentPath, CancellationToken cancellationToken = default)
@@ -407,12 +416,105 @@ public sealed class KirayeeService(IKirayeeRepository repository, ILogger<Kiraye
                 await repository.AddPaymentsAsync(CreateMissingMonthlyPayments(lease), cancellationToken);
                 break;
             case "withdraw" when lease.OwnerId == userId && lease.Status is ("Pending" or "SentBack"): lease.Withdraw(); break;
-            case "cancel" when lease.Status == "Active": lease.RequestCancellation(); break;
-            case "terminate" when lease.OwnerId == userId && lease.Status == "CancellationRequested": lease.Terminate(); lease.Property.SetStatus("Available"); break;
+            case "cancel" when lease.TenantId == userId && lease.Status == "Active": lease.RequestCancellation(); break;
+            case "request-cancellation" when lease.OwnerId == userId && lease.Status == "Active" && lease.IsLiveOn(DateTime.UtcNow):
+                lease.RequestOwnerCancellation();
+                break;
+            case "accept-cancellation" when lease.TenantId == userId && lease.Status == "OwnerCancellationRequested":
+                lease.AcceptOwnerCancellationRequest();
+                await CompleteLeaseCancellationAsync(lease, cancellationToken);
+                break;
+            case "terminate" when lease.OwnerId == userId && lease.Status == "CancellationRequested":
+            {
+                lease.Terminate();
+                await CompleteLeaseCancellationAsync(lease, cancellationToken);
+                break;
+            }
             default: return null;
         }
         await repository.SaveChangesAsync(cancellationToken);
         return ToLease(lease);
+    }
+
+    private async Task CompleteLeaseCancellationAsync(Lease lease, CancellationToken cancellationToken)
+    {
+        if (!lease.Property.HasLiveLeaseOn(DateTime.UtcNow))
+        {
+            lease.Property.SetStatus("Available");
+        }
+
+        await repository.AddFeedbackSessionsAsync(
+        [
+            new FeedbackSession(lease.LeaseId, lease.PropertyId, lease.TenantId, lease.OwnerId, FeedbackTypes.TenantToOwner),
+            new FeedbackSession(lease.LeaseId, lease.PropertyId, lease.OwnerId, lease.TenantId, FeedbackTypes.OwnerToTenant),
+        ], cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<FeedbackPendingSessionResponse>?> GetPendingFeedbackAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var user = await repository.FindUserAsync(userId, cancellationToken);
+        if (user is null) return null;
+        var sessions = await repository.GetPendingFeedbackSessionsAsync(userId, cancellationToken);
+        var questions = await repository.GetFeedbackQuestionsAsync(cancellationToken);
+        return sessions.Select(session => new FeedbackPendingSessionResponse(
+            session.Id,
+            session.LeaseId,
+            session.PropertyId,
+            session.Property.PropertyName,
+            string.Join(" ", new[] { session.Subject.Profile?.FirstName, session.Subject.Profile?.LastName }.Where(name => !string.IsNullOrWhiteSpace(name))),
+            session.FeedbackType,
+            questions.Where(question => question.Category == session.FeedbackType)
+                .OrderBy(question => question.DisplayOrder)
+                .Select(question => new FeedbackQuestionResponse(question.Id, question.QuestionText, question.DisplayOrder))
+                .ToArray())).ToArray();
+    }
+
+    public async Task<IReadOnlyList<FeedbackHistoryResponse>?> GetFeedbackHistoryAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var user = await repository.FindUserAsync(userId, cancellationToken);
+        if (user is null) return null;
+        var sessions = await repository.GetFeedbackHistoryAsync(userId, cancellationToken);
+        return sessions.Select(session =>
+        {
+            return new FeedbackHistoryResponse(
+                session.Id,
+                session.LeaseId,
+                session.PropertyId,
+                session.Property.PropertyName,
+                session.FeedbackType,
+                "RECEIVED",
+                string.Join(" ", new[] { session.Evaluator.Profile?.FirstName, session.Evaluator.Profile?.LastName }.Where(name => !string.IsNullOrWhiteSpace(name))),
+                session.OverallScore ?? 0,
+                session.CompletedAt ?? session.CreatedAt,
+                session.Responses
+                    .OrderBy(response => response.Question.DisplayOrder)
+                    .Select(response => new FeedbackHistoryRatingResponse(response.Question.QuestionText, response.Question.DisplayOrder, response.Rating))
+                    .ToArray());
+        }).ToArray();
+    }
+
+    public async Task<FeedbackSubmissionResponse?> SubmitFeedbackAsync(Guid userId, FeedbackSubmissionRequest request, CancellationToken cancellationToken = default)
+    {
+        var session = await repository.FindFeedbackSessionAsync(request.SessionId, cancellationToken);
+        if (session is null || session.EvaluatorId != userId || session.Status != "PENDING" || request.Responses is null) return null;
+        var questions = await repository.GetFeedbackQuestionsAsync(cancellationToken);
+        var sessionQuestions = questions.Where(question => question.Category == session.FeedbackType).ToArray();
+        if (sessionQuestions.Length != 10 || request.Responses.Count != sessionQuestions.Length
+            || request.Responses.Any(response => response is null || response.Rating is < 1 or > 5)
+            || request.Responses.Select(response => response.QuestionId).Distinct().Count() != sessionQuestions.Length
+            || !request.Responses.Select(response => response.QuestionId).ToHashSet().SetEquals(sessionQuestions.Select(question => question.Id)))
+        {
+            return null;
+        }
+
+        var completedAt = DateTime.UtcNow;
+        var average = Math.Round(request.Responses.Average(response => response.Rating), 2);
+        session.Complete(average, completedAt);
+        await repository.AddFeedbackResponsesAsync(
+            request.Responses.Select(response => new FeedbackResponse(session.Id, response.QuestionId, response.Rating)),
+            cancellationToken);
+        await repository.SaveChangesAsync(cancellationToken);
+        return new FeedbackSubmissionResponse(session.Id, session.Status, average, completedAt);
     }
 
     public async Task<PaymentResponse?> PayAsync(Guid userId, Guid paymentId, PaymentRequest request, CancellationToken cancellationToken = default)
