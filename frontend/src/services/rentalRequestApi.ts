@@ -30,8 +30,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return (await response.json()) as T;
 }
 
-export function getRentalRequests(status: 'Active' | 'Pending'): Promise<RentalRequestRecord[]> {
-  return request<RentalRequestRecord[]>(`/api/rental-requests?status=${status}`);
+export function getRentalRequests(status?: 'Active' | 'Pending'): Promise<RentalRequestRecord[]> {
+  const query = status ? `?status=${status}` : '';
+  return request<RentalRequestRecord[]>(`/api/rental-requests${query}`);
 }
 
 export function getTenantRentalRequests(): Promise<TenantRentalRequestRecord[]> {

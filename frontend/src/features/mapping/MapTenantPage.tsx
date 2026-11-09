@@ -7,13 +7,14 @@ import { ActionModal } from '../../components/ActionModal';
 import type { PropertyRecord } from '../../types/property';
 import type { RentalRequestRecord, TenantLookupResult } from '../../types/rentalRequest';
 
-type RequestTab = 'active' | 'sent';
+type RequestTab = 'active' | 'sent' | 'history';
 type RequestStep = 1 | 2 | 3;
 
 export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement {
   const [activeTab, setActiveTab] = useState<RequestTab>('active');
   const [activeRenters, setActiveRenters] = useState<RentalRequestRecord[]>([]);
   const [sentRequests, setSentRequests] = useState<RentalRequestRecord[]>([]);
+  const [requestHistory, setRequestHistory] = useState<RentalRequestRecord[]>([]);
   const [properties, setProperties] = useState<PropertyRecord[]>([]);
   const [isRequestOpen, setIsRequestOpen] = useState(false);
   const [step, setStep] = useState<RequestStep>(1);
@@ -30,9 +31,10 @@ export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement 
   const [error, setError] = useState('');
 
   async function refreshRequests(): Promise<void> {
-    const [active, pending] = await Promise.all([getRentalRequests('Active'), getRentalRequests('Pending')]);
-    setActiveRenters(active);
-    setSentRequests(pending);
+    const requests = await getRentalRequests();
+    setActiveRenters(requests.filter((request) => request.status === 'Active'));
+    setSentRequests(requests.filter((request) => request.status === 'Pending' || request.status === 'SentBack'));
+    setRequestHistory(requests.filter((request) => !['Active', 'Pending', 'SentBack'].includes(request.status)));
   }
 
   useEffect(() => {
@@ -40,15 +42,15 @@ export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement 
     async function loadModule(): Promise<void> {
       try {
         const profile = await getCurrentProfile();
-        const [ownerProperties, activeRequests, pendingRequests] = await Promise.all([
+        const [ownerProperties, ownerRequests] = await Promise.all([
           getProperties(profile.userId),
-          getRentalRequests('Active'),
-          getRentalRequests('Pending'),
+          getRentalRequests(),
         ]);
         if (active) {
           setProperties(ownerProperties);
-          setActiveRenters(activeRequests);
-          setSentRequests(pendingRequests);
+          setActiveRenters(ownerRequests.filter((request) => request.status === 'Active'));
+          setSentRequests(ownerRequests.filter((request) => request.status === 'Pending' || request.status === 'SentBack'));
+          setRequestHistory(ownerRequests.filter((request) => !['Active', 'Pending', 'SentBack'].includes(request.status)));
         }
       } catch (reason) {
         if (active) setError(reason instanceof Error ? reason.message : 'Map Tenant could not be loaded.');
@@ -144,9 +146,10 @@ export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement 
         </section>
       ) : (
         <>
-          <div className="mapping-tabs" role="tablist" aria-label="Tenant mappings">
+          <div className="mapping-tabs mapping-tabs-three" role="tablist" aria-label="Tenant mappings">
             <button className={activeTab === 'active' ? 'active' : ''} type="button" role="tab" aria-selected={activeTab === 'active'} onClick={() => setActiveTab('active')}>Active Renters ({activeRenters.length})</button>
             <button className={activeTab === 'sent' ? 'active' : ''} type="button" role="tab" aria-selected={activeTab === 'sent'} onClick={() => setActiveTab('sent')}>Sent Requests ({sentRequests.length})</button>
+            <button className={activeTab === 'history' ? 'active' : ''} type="button" role="tab" aria-selected={activeTab === 'history'} onClick={() => setActiveTab('history')}>Request History ({requestHistory.length})</button>
           </div>
 
           {error && <p className="properties-error" role="alert">{error}</p>}
@@ -156,11 +159,17 @@ export function MapTenantPage({ onBack }: { onBack: () => void }): ReactElement 
                 {activeRenters.map((request) => <RequestCard key={request.leaseId} request={request} onDownload={() => downloadRentalAgreement(request.leaseId)} />)}
               </section>
             )
-          ) : sentRequests.length === 0 ? (
+          ) : activeTab === 'sent' && sentRequests.length === 0 ? (
             <section className="mapping-empty-requests"><FileText size={30} /><h2>No Sent Requests</h2><p>Rental requests you send will appear here.</p><button className="mapping-send-button" type="button" onClick={openRequestFlow}><Plane size={15} /> Send Request</button></section>
-          ) : (
+          ) : activeTab === 'sent' ? (
             <section className="mapping-list" aria-label="Sent rental requests">
                 {sentRequests.map((request) => <RequestCard key={request.leaseId} request={request} onDownload={() => downloadRentalAgreement(request.leaseId)} onWithdraw={() => withdrawRequest(request.leaseId)} />)}
+            </section>
+          ) : requestHistory.length === 0 ? (
+            <section className="mapping-empty-requests"><FileText size={30} /><h2>No Request History</h2><p>Withdrawn, rejected, and completed requests will appear here.</p></section>
+          ) : (
+            <section className="mapping-list" aria-label="Rental request history">
+              {requestHistory.map((request) => <RequestCard key={request.leaseId} request={request} onDownload={() => downloadRentalAgreement(request.leaseId)} />)}
             </section>
           )}
         </>
